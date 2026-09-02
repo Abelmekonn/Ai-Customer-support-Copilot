@@ -1,3 +1,5 @@
+import { SettingsSection } from "@/components/settings/settings-shell";
+
 export function OutboundMailboxCard({
   configured,
   fromAddress,
@@ -8,27 +10,28 @@ export function OutboundMailboxCard({
   replyTo: string;
 }) {
   return (
-    <section className="max-w-lg space-y-3 rounded-xl border border-white/10 p-5">
-      <div>
-        <h2 className="text-[16px] font-medium">Outbound email</h2>
-        <p className="mt-1 text-[14px] leading-6 text-steel">
-          Send on a ticket goes out through Resend, with Reply-To set to your inbound address so customers stay on the
-          same thread. The copilot never sends on its own.
+    <SettingsSection
+      id="outbound"
+      title="Outbound email"
+      description="Send on a ticket goes out through Resend. Reply-To stays on your inbound address so the thread holds. The copilot never sends on its own."
+    >
+      <dl className="space-y-4">
+        <div>
+          <dt className="text-sm font-medium">From</dt>
+          <dd className="mt-1 font-mono text-[13px] text-ink-tint">
+            {configured && fromAddress ? fromAddress : "Not configured"}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-sm font-medium">Reply-To</dt>
+          <dd className="mt-1 font-mono text-[13px] text-ink-tint">{replyTo}</dd>
+        </div>
+      </dl>
+      {!configured ? (
+        <p className="mt-4 text-[13px] text-steel">
+          Add RESEND_API_KEY and RESEND_FROM on the server, then retry a reply.
         </p>
-      </div>
-      {configured && fromAddress ? (
-        <p className="text-[14px]">
-          From <span className="font-mono text-[13px]">{fromAddress}</span>
-        </p>
-      ) : (
-        <p className="text-[14px] text-steel">
-          Outbound isn’t configured yet. Add <span className="font-mono">RESEND_API_KEY</span> and{" "}
-          <span className="font-mono">RESEND_FROM</span> on the server, then retry a reply.
-        </p>
-      )}
-      <p className="text-[13px] text-steel">
-        Reply-To: <span className="font-mono">{replyTo}</span>
-      </p>
-    </section>
+      ) : null}
+    </SettingsSection>
   );
 }

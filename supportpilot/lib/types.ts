@@ -16,6 +16,11 @@ export type Organization = {
   name: string;
   slug: string;
   is_demo: boolean;
+  from_name: string | null;
+  reply_to: string | null;
+  brand_tone: string | null;
+  plan_id?: string;
+  subscription_status?: string;
   created_at: string;
   updated_at: string;
 };
@@ -58,6 +63,19 @@ export type Ticket = {
 
 export type TicketWithCustomer = Ticket & {
   customer: Pick<Customer, "id" | "name" | "email">;
+  assignee?: Pick<AppUser, "id" | "full_name"> | null;
+};
+
+export type Invite = {
+  id: string;
+  organization_id: string;
+  email: string;
+  role: UserRole;
+  token: string;
+  invited_by: string;
+  accepted_at: string | null;
+  expires_at: string;
+  created_at: string;
 };
 
 export type Message = {

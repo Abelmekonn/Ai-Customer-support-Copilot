@@ -1,6 +1,6 @@
 import { getChannelAccount, inboundMailDomain } from "@/lib/channels/email/account";
 import { outboundConfig } from "@/lib/channels/email/config";
-import { buildThreadHeaders, newOutboundMessageId, replySubject } from "@/lib/channels/email/headers";
+import { buildThreadHeaders, formatOutboundFrom, newOutboundMessageId, replySubject } from "@/lib/channels/email/headers";
 import { sendWithResend, type OutboundSendResult } from "@/lib/channels/email/send";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordUsage } from "@/lib/usage/record";
@@ -64,7 +64,13 @@ export async function deliverOutboundMessage(
   }
 
   const channel = await getChannelAccount(organizationId);
-  const replyTo = channel?.inbound_address;
+  const { data: organization } = await admin
+    .from("organizations")
+    .select("from_name, reply_to")
+    .eq("id", organizationId)
+    .maybeSingle();
+
+  const replyTo = organization?.reply_to?.trim() || channel?.inbound_address;
   if (!replyTo) {
     return {
       ok: false,
@@ -91,7 +97,7 @@ export async function deliverOutboundMessage(
 
   const result = await sendWithResend({
     apiKey: config.apiKey,
-    from: config.from,
+    from: formatOutboundFrom(config.from, organization?.from_name),
     to: customer.email,
     replyTo,
     subject: replySubject(String(ticket.subject)),

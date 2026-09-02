@@ -21,6 +21,7 @@ export class MiniMaxError extends Error {
 export async function generateCopilotDraftFromThread(input: {
   ticketContext: string;
   policyPassages: string;
+  brandTone?: string | null;
 }): Promise<MiniMaxDraft> {
   const apiKey = process.env.MINIMAX_API_KEY?.trim();
   if (!apiKey) {
@@ -30,6 +31,10 @@ export async function generateCopilotDraftFromThread(input: {
   const baseUrl = (process.env.MINIMAX_BASE_URL?.trim() || DEFAULT_BASE_URL).replace(/\/$/, "");
   const model = process.env.MINIMAX_MODEL?.trim() || DEFAULT_MODEL;
   const hasPolicy = Boolean(input.policyPassages.trim());
+
+  const tone = input.brandTone?.trim()
+    ? ` Workspace tone: ${input.brandTone.trim().slice(0, 200)}.`
+    : "";
 
   const response = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
@@ -46,7 +51,7 @@ export async function generateCopilotDraftFromThread(input: {
         {
           role: "system",
           content: hasPolicy
-            ? `You are SupportPilot, a copilot for human support agents. You never send mail to the customer.
+            ? `You are SupportPilot, a copilot for human support agents. You never send mail to the customer.${tone}
 Return JSON only, no markdown, with this shape:
 {"intent":"short intent label","category":"billing|account|technical|shipping|other","urgency":"low"|"medium"|"high","intentConfidence":0.0-1.0,"response":"the draft the agent can edit and send","needsHumanReview":true}
 Write the response as the agent. Use ONLY the policy passages provided. Quote or paraphrase them; do not invent refunds, SLAs, or account facts. If the passages do not cover the question, say you will check with a lead and ask one clarifying question. Set needsHumanReview true.`

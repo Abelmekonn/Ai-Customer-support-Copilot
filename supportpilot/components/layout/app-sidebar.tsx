@@ -10,7 +10,11 @@ import {
   Ticket,
   Users,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { SignOutButton } from "@/components/layout/sign-out-button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import type { UserRole } from "@/lib/types";
+import { canViewAnalytics } from "@/lib/auth/roles";
+import { cn, initials } from "@/lib/utils";
 
 const items = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -21,8 +25,9 @@ const items = [
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
-export function AppSidebar() {
+export function AppSidebar({ name, role }: { name: string; role: UserRole }) {
   const pathname = usePathname();
+  const nav = items.filter((item) => item.href !== "/dashboard/analytics" || canViewAnalytics(role));
 
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-white/10 bg-black text-white">
@@ -31,7 +36,7 @@ export function AppSidebar() {
         <span className="text-[15px] font-medium tracking-tight">SupportPilot</span>
       </div>
       <nav className="flex flex-1 flex-col gap-0.5 p-3">
-        {items.map((item) => {
+        {nav.map((item) => {
           const active =
             item.href === "/dashboard"
               ? pathname === "/dashboard"
@@ -54,9 +59,20 @@ export function AppSidebar() {
           );
         })}
       </nav>
-      <p className="px-4 pb-5 text-[12px] font-medium leading-[1.4] text-white/40">
-        Human-in-the-loop. The agent always sends the reply.
-      </p>
+      <div className="border-t border-white/10 p-3">
+        <div className="flex items-center gap-2.5 px-2 py-2">
+          <Avatar className="size-8">
+            <AvatarFallback className="bg-white/10 text-[12px] font-semibold text-white">
+              {initials(name)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <p className="truncate text-[13px] font-medium">{name}</p>
+            <p className="text-[12px] capitalize text-white/40">{role}</p>
+          </div>
+        </div>
+        <SignOutButton className="mt-1 w-full rounded-md px-3 py-2 text-left hover:bg-white/8" />
+      </div>
     </aside>
   );
 }

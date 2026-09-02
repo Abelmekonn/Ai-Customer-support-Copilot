@@ -54,9 +54,16 @@ ${thread || "(no messages yet)"}`;
     )
     .join("\n\n");
 
+  const { data: organization } = await input.supabase
+    .from("organizations")
+    .select("brand_tone")
+    .eq("id", input.organizationId)
+    .maybeSingle();
+
   const draft = await generateCopilotDraftFromThread({
     ticketContext,
     policyPassages,
+    brandTone: organization?.brand_tone,
   });
 
   const sources: CopilotSource[] = retrieved.map((chunk) => ({

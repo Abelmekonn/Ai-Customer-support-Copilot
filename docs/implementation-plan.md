@@ -28,7 +28,7 @@ If any step is fake (sample tickets only, draft with no sources, send only write
 | Copilot | MiniMax draft from thread only. Empty sources. Dummy confidence |
 | Send | Resend outbound + audit. Internal notes stay local |
 | Analytics / settings | Shell pages |
-| Billing / invites | None |
+| Billing / invites | Stripe Checkout + portal; monthly draft cap; seats; invites |
 
 ---
 
@@ -143,6 +143,8 @@ Agent: Send        -->  send job   --> outbound email + audit row
 
 ### Phase 4 — Team & workspace
 
+**Status:** applied (2026-09-02). Admins invite by email; invited users join the same org (no new workspace). Agents cannot upload or delete knowledge. Tickets have an assignee. Org from-name, reply-to, and one brand-tone line feed outbound mail and copilot drafts.
+
 **Outcome:** more than one agent can use the service.
 
 - Invite by email; roles: `admin` (docs, mailbox, billing), `agent` (queue + send), `manager` (analytics)
@@ -153,6 +155,8 @@ Agent: Send        -->  send job   --> outbound email + audit row
 **Done when:** admin invites an agent; agent cannot delete knowledge.
 
 ### Phase 5 — Packaging & billing
+
+**Status:** applied (2026-09-02). Plans live on the organization (`starter` / `team` / `scale`) with seats and a calendar-month UTC draft cap from `usage_events`. Generate draft is blocked at cap before MiniMax. Stripe Checkout + customer portal + webhook; without Stripe keys, Starter caps still apply.
 
 **Outcome:** it is sold as a service.
 
@@ -204,7 +208,7 @@ Do not migrate everything up front. Add tables with the phase:
 - **Phase 3:** `outbound_messages` or columns on `messages` (provider_id, generation_id)
 - **Phase 3:** `internal_notes`
 - **Phase 4:** invites table; `tickets.assigned_to` already exists — use it
-- **Phase 5:** `plans`, `subscriptions` (or Stripe IDs on `organizations`)
+- **Phase 5:** Stripe IDs and `plan_id` on `organizations` (not a separate plans table)
 
 ---
 

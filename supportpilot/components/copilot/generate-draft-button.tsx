@@ -12,17 +12,22 @@ const initial: CopilotActionState = {};
 export function GenerateDraftButton({
   ticketId,
   label = "Generate draft",
+  blocked = false,
+  blockedMessage,
 }: {
   ticketId: string;
   label?: string;
+  blocked?: boolean;
+  blockedMessage?: string | null;
 }) {
   const [state, action, pending] = useActionState(generateCopilotDraftAction, initial);
+  const error = state.error ?? (blocked ? blockedMessage : null);
 
   return (
     <form action={action} className="space-y-2">
       <input type="hidden" name="ticketId" value={ticketId} />
-      {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}
-      <Button type="submit" size="sm" variant="dark" disabled={pending}>
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      <Button type="submit" size="sm" variant="dark" disabled={pending || blocked}>
         {pending ? "Drafting with MiniMax…" : label}
       </Button>
     </form>

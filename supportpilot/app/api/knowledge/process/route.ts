@@ -21,11 +21,17 @@ export async function POST(request: Request) {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("organization_id")
+    .select("organization_id, role")
     .eq("id", user.id)
     .single();
   if (!profile) {
     return NextResponse.json({ error: "Profile not found" }, { status: 400 });
+  }
+  if (profile.role !== "admin") {
+    return NextResponse.json(
+      { error: "Only admins can retry indexing." },
+      { status: 403 },
+    );
   }
 
   const { data: document } = await supabase

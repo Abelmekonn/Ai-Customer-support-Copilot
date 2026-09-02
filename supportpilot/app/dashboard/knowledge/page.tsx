@@ -2,6 +2,7 @@ import { DocumentList } from "@/components/knowledge/document-list";
 import { IndexingPoller } from "@/components/knowledge/indexing-poller";
 import { ProcessingStatus } from "@/components/knowledge/processing-status";
 import { UploadDropzone } from "@/components/knowledge/upload-dropzone";
+import { canManageKnowledge } from "@/lib/auth/roles";
 import { getCurrentUser, listDocuments } from "@/lib/data";
 
 export default async function KnowledgePage() {
@@ -20,8 +21,13 @@ export default async function KnowledgePage() {
         </p>
       </div>
       <ProcessingStatus current={documents[0]?.status} />
-      <UploadDropzone />
-      <DocumentList documents={documents} />
+      {canManageKnowledge(user.role) ? <UploadDropzone /> : (
+        <p className="text-[14px] text-steel">Only admins can upload or delete knowledge documents.</p>
+      )}
+      <DocumentList
+        documents={documents}
+        canManage={canManageKnowledge(user.role)}
+      />
     </div>
   );
 }

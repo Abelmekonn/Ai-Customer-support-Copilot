@@ -12,10 +12,14 @@ export function ResponseEditor({
   ticketId,
   generationId,
   initialValue = "",
+  draftBlocked = false,
+  draftBlockedMessage,
 }: {
   ticketId: string;
   generationId?: string;
   initialValue?: string;
+  draftBlocked?: boolean;
+  draftBlockedMessage?: string | null;
 }) {
   const [value, setValue] = useState(initialValue);
   const [state, action, pending] = useActionState(sendReplyAction, initial);
@@ -42,7 +46,12 @@ export function ResponseEditor({
         {state.success ? <p className="mt-2 text-sm text-primary">{state.success}</p> : null}
       </form>
       <div className="mt-2">
-        <GenerateDraftButton ticketId={ticketId} label="Regenerate" />
+        <GenerateDraftButton
+          ticketId={ticketId}
+          label="Regenerate"
+          blocked={draftBlocked}
+          blockedMessage={draftBlockedMessage}
+        />
       </div>
     </div>
   );

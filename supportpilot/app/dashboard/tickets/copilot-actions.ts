@@ -1,6 +1,7 @@
 "use server";
 
 import { requireUser } from "@/lib/auth";
+import { assertCanGenerateDraft } from "@/lib/billing/usage";
 import { toCopilotError, draftTicketReply } from "@/lib/copilot/generate";
 import { getTicket, listMessages } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
@@ -21,6 +22,11 @@ export async function generateCopilotDraftAction(
 
   const ticket = await getTicket(user.organization_id, ticketId);
   if (!ticket) return { error: "Ticket not found." };
+
+  const cap = await assertCanGenerateDraft(user.organization_id);
+  if (!cap.ok) {
+    return { error: cap.error };
+  }
 
   const messages = await listMessages(ticket.id);
 

@@ -1,9 +1,12 @@
+import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { canViewAnalytics } from "@/lib/auth/roles";
 import { getCurrentUser, getDashboardStats } from "@/lib/data";
 
 export default async function AnalyticsPage() {
   const user = await getCurrentUser();
   if (!user) return null;
+  if (!canViewAnalytics(user.role)) redirect("/dashboard");
 
   const stats = await getDashboardStats(user.organization_id);
   const total = stats.openTickets + stats.pendingTickets + stats.resolvedTickets;

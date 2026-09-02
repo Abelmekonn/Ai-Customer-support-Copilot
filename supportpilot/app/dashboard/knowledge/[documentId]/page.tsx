@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { DeleteDocumentButton } from "@/components/knowledge/delete-document-button";
 import { IndexingPoller } from "@/components/knowledge/indexing-poller";
 import { ProcessingStatus } from "@/components/knowledge/processing-status";
 import { RetryIndexButton } from "@/components/knowledge/retry-index-button";
+import { canManageKnowledge } from "@/lib/auth/roles";
 import { getCurrentUser } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 
@@ -38,7 +40,12 @@ export default async function DocumentPage({
           <span className="text-xs text-muted-foreground">
             {document.file_type.toUpperCase()}
           </span>
-          <RetryIndexButton documentId={document.id} status={document.status} />
+          {canManageKnowledge(user.role) ? (
+            <>
+              <RetryIndexButton documentId={document.id} status={document.status} />
+              <DeleteDocumentButton documentId={document.id} />
+            </>
+          ) : null}
         </div>
       </div>
       {document.error_message ? (

@@ -6,7 +6,9 @@ import { ReplyComposer } from "@/components/tickets/reply-composer";
 import { SendStatusPoller } from "@/components/tickets/send-status-poller";
 import { TicketMessage } from "@/components/tickets/ticket-message";
 import { TicketStatusActions } from "@/components/tickets/ticket-status-actions";
-import { getCurrentUser, getLatestGeneration, getTicket, listGenerationSources, listMessageAttachments, listMessages } from "@/lib/data";
+import { AssigneeSelect } from "@/components/tickets/assignee-select";
+import { getCurrentUser, getLatestGeneration, getTicket, listGenerationSources, listMessageAttachments, listMessages, listTeammates } from "@/lib/data";
+import { getBillingSnapshot } from "@/lib/billing/usage";
 import { formatTicketNumber } from "@/lib/utils";
 import type { CopilotResult } from "@/lib/ai/types";
 
@@ -24,10 +26,12 @@ export default async function TicketWorkspacePage({
 
   const messages = await listMessages(ticket.id);
   const attachments = await listMessageAttachments(ticket.id);
+  const teammates = await listTeammates(user.organization_id);
   const generation = await getLatestGeneration(ticket.id);
   const sources = generation ? await listGenerationSources(generation.id) : [];
   const result = generationToResult(generation, sources);
   const sending = messages.some((message) => message.send_status === "queued");
+  const billing = await getBillingSnapshot(user.organization_id);
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
@@ -46,7 +50,14 @@ export default async function TicketWorkspacePage({
             <span>{ticket.category ?? "General"}</span>
           </div>
         </div>
-        <TicketStatusActions ticketId={ticket.id} status={ticket.status} />
+        <div className="flex items-center gap-3">
+          <AssigneeSelect
+            ticketId={ticket.id}
+            assignedTo={ticket.assigned_to}
+            teammates={teammates}
+          />
+          <TicketStatusActions ticketId={ticket.id} status={ticket.status} />
+        </div>
       </div>
 
       <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col lg:flex-row">
@@ -69,7 +80,13 @@ export default async function TicketWorkspacePage({
           </div>
           <ReplyComposer ticketId={ticket.id} />
         </section>
-        <CopilotPanel ticketId={ticket.id} generationId={generation?.id} result={result} />
+        <CopilotPanel
+          ticketId={ticket.id}
+          generationId={generation?.id}
+          result={result}
+          drafts={billing.drafts}
+          draftMessage={billing.message}
+        />
       </div>
       <SourceList sources={result?.sources ?? []} />
     </div>

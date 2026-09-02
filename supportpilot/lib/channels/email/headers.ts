@@ -1,4 +1,4 @@
-import { stripReplyPrefix } from "@/lib/channels/email/parse";
+import { extractDisplayName, extractEmailAddress, stripReplyPrefix } from "@/lib/channels/email/parse";
 
 export function wrapMessageId(id: string) {
   const trimmed = id.replace(/^<|>$/g, "").trim();
@@ -12,6 +12,12 @@ export function unwrapMessageId(id: string) {
 export function replySubject(subject: string) {
   const stripped = stripReplyPrefix(subject);
   return `Re: ${stripped}`;
+}
+
+export function formatOutboundFrom(resendFrom: string, fromName?: string | null) {
+  const email = extractEmailAddress(resendFrom);
+  const name = fromName?.trim() || extractDisplayName(resendFrom);
+  return name ? `${name} <${email}>` : email;
 }
 
 export function newOutboundMessageId(domain: string) {

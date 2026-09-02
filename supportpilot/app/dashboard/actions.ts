@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/data";
+import { canEditWorkspace, canManageMailbox } from "@/lib/auth/roles";
+import { extractEmailAddress } from "@/lib/channels/email/parse";
 import { queueTicketReply, retryOutboundMessage } from "@/lib/channels/email/queue-reply";
 import { sendMessageSchema, updateTicketSchema } from "@/lib/validation/ticket";
 
@@ -53,6 +55,31 @@ export async function retryOutboundSendAction(
   return result;
 }
 
+export async function assignTicketAction(ticketId: string, assignedTo: string) {
+  const user = await requireUser();
+  const supabase = await createClient();
+  const assigneeId = assignedTo.trim() === "" ? null : assignedTo;
+
+  if (assigneeId) {
+    const { data: teammate } = await supabase
+      .from("users")
+      .select("id")
+      .eq("id", assigneeId)
+      .eq("organization_id", user.organization_id)
+      .maybeSingle();
+    if (!teammate) return;
+  }
+
+  await supabase
+    .from("tickets")
+    .update({ assigned_to: assigneeId })
+    .eq("id", ticketId)
+    .eq("organization_id", user.organization_id);
+
+  revalidatePath(`/dashboard/tickets/${ticketId}`);
+  revalidatePath("/dashboard/tickets");
+}
+
 export async function updateTicketStatusAction(ticketId: string, status: "open" | "pending" | "resolved") {
   const user = await requireUser();
   const parsed = updateTicketSchema.safeParse({ status });
@@ -75,6 +102,10 @@ export async function updateProfileAction(_prev: ActionState, formData: FormData
   const fullName = String(formData.get("fullName") ?? "").trim();
   const orgName = String(formData.get("organizationName") ?? "").trim();
 
+  const fromName = String(formData.get("fromName") ?? "").trim();
+  const replyTo = String(formData.get("replyTo") ?? "").trim();
+  const brandTone = String(formData.get("brandTone") ?? "").trim();
+
   if (fullName.length < 2) {
     return { error: "Name must be at least 2 characters." };
   }
@@ -83,10 +114,19 @@ export async function updateProfileAction(_prev: ActionState, formData: FormData
   const { error: userError } = await supabase.from("users").update({ full_name: fullName }).eq("id", user.id);
   if (userError) return { error: userError.message };
 
-  if (orgName.length >= 2 && (user.role === "admin" || user.role === "manager")) {
+  if (canEditWorkspace(user.role) && orgName.length >= 2) {
+    const orgUpdate: Record<string, string | null> = { name: orgName };
+    if (canManageMailbox(user.role)) {
+      if (replyTo && !replyTo.includes("@")) {
+        return { error: "Reply-To must be an email address." };
+      }
+      orgUpdate.from_name = fromName || null;
+      orgUpdate.reply_to = replyTo ? extractEmailAddress(replyTo) : null;
+      orgUpdate.brand_tone = brandTone.slice(0, 200) || null;
+    }
     const { error: orgError } = await supabase
       .from("organizations")
-      .update({ name: orgName })
+      .update(orgUpdate)
       .eq("id", user.organization_id);
     if (orgError) return { error: orgError.message };
   }

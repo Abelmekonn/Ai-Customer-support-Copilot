@@ -98,13 +98,46 @@ describe("Phase 3 — email out + audit", () => {
 });
 
 describe("Phase 4 — team workspace", () => {
-  it.todo("admin can invite an agent who cannot delete knowledge");
+  it("admin can invite an agent who cannot delete knowledge", () => {
+    expect(existsApp("lib/team/invites.ts")).toBe(true);
+    expect(existsApp("lib/auth/roles.ts")).toBe(true);
+    expect(existsApp("app/(auth)/invite/[token]/page.tsx")).toBe(true);
+    expect(existsApp("supabase/migrations/007_team.sql")).toBe(true);
+    const roles = readApp("lib/auth/roles.ts");
+    expect(roles).toContain("canManageKnowledge");
+    expect(roles).toContain('role === "admin"');
+    const remove = readApp("app/dashboard/knowledge/actions.ts");
+    expect(remove).toContain("canManageKnowledge");
+    expect(remove).toContain("deleteKnowledgeDocumentAction");
+    const migration = readApp("supabase/migrations/007_team.sql");
+    expect(migration).toContain("admins can delete documents");
+    expect(migration).toContain("invite_token");
+    const upload = readApp("app/api/knowledge/upload/route.ts");
+    expect(upload).toContain('role !== "admin"');
+    const team = readApp("app/dashboard/settings/team-actions.ts");
+    expect(team).toContain("canInviteMembers");
+  });
 });
 
 describe("Phase 5 — billing", () => {
-  it.todo("enforces a monthly draft cap without affecting other orgs");
-  it("does not yet have a billing module", () => {
-    expect(existsApp("lib/billing/plans.ts")).toBe(false);
+  it("enforces a monthly draft cap without affecting other orgs", () => {
+    expect(existsApp("lib/billing/plans.ts")).toBe(true);
+    expect(existsApp("lib/billing/usage.ts")).toBe(true);
+    expect(existsApp("app/api/webhooks/stripe/route.ts")).toBe(true);
+    expect(existsApp("supabase/migrations/008_billing.sql")).toBe(true);
+    const plans = readApp("lib/billing/plans.ts");
+    expect(plans).toContain("evaluateDraftCap");
+    expect(plans).toContain("organizationId");
+    const usage = readApp("lib/billing/usage.ts");
+    expect(usage).toContain('.eq("organization_id", organizationId)');
+    expect(usage).toContain('eq("type", "draft")');
+    const actions = readApp("app/dashboard/tickets/copilot-actions.ts");
+    expect(actions).toContain("assertCanGenerateDraft");
+    expect(actions.indexOf("assertCanGenerateDraft")).toBeLessThan(actions.indexOf("draftTicketReply"));
+    const webhook = readApp("app/api/webhooks/stripe/route.ts");
+    expect(webhook).toContain("constructEvent");
+    const roles = readApp("lib/auth/roles.ts");
+    expect(roles).toContain("canManageBilling");
   });
 });
 

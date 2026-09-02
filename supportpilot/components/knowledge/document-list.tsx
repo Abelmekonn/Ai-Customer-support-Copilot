@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { DeleteDocumentButton } from "@/components/knowledge/delete-document-button";
 import { RetryIndexButton } from "@/components/knowledge/retry-index-button";
 import type { KnowledgeDocument } from "@/lib/types";
 
@@ -14,7 +15,13 @@ const statusLabel: Record<KnowledgeDocument["status"], string> = {
   failed: "Failed",
 };
 
-export function DocumentList({ documents }: { documents: KnowledgeDocument[] }) {
+export function DocumentList({
+  documents,
+  canManage,
+}: {
+  documents: KnowledgeDocument[];
+  canManage: boolean;
+}) {
   if (documents.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-beige-deep bg-cream px-6 py-16 text-center">
@@ -50,7 +57,8 @@ export function DocumentList({ documents }: { documents: KnowledgeDocument[] }) 
             </div>
           </Link>
           <div className="flex shrink-0 items-center gap-3">
-            <RetryIndexButton documentId={doc.id} status={doc.status} />
+            {canManage ? <RetryIndexButton documentId={doc.id} status={doc.status} /> : null}
+            {canManage ? <DeleteDocumentButton documentId={doc.id} /> : null}
             <Badge variant={doc.status === "indexed" ? "default" : doc.status === "failed" ? "high" : "secondary"}>
               {statusLabel[doc.status]}
             </Badge>

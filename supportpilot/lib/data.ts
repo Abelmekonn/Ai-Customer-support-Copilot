@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { CopilotSource } from "@/lib/ai/types";
-import type { AiGeneration, AppUser, Customer, KnowledgeDocument, Message, MessageAttachment, Organization, TicketWithCustomer } from "@/lib/types";
+import type { AiGeneration, AppUser, Customer, Invite, KnowledgeDocument, Message, MessageAttachment, Organization, TicketWithCustomer } from "@/lib/types";
 
 export async function getCurrentUser() {
   const supabase = await createClient();
@@ -39,6 +39,30 @@ export async function getOrganization(organizationId: string) {
     .single();
 
   return data ? ({ ...data, is_demo: data.is_demo !== false } as Organization) : null;
+}
+
+export async function listTeammates(organizationId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as AppUser[];
+}
+
+export async function listInvites(organizationId: string, includeTokens = false) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("invites")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const rows = (data ?? []) as Invite[];
+  if (includeTokens) return rows;
+  return rows.map((invite) => ({ ...invite, token: "" }));
 }
 
 export async function getDashboardStats(organizationId: string) {
@@ -89,7 +113,7 @@ export async function listTickets(organizationId: string, status?: string) {
   const supabase = await createClient();
   let query = supabase
     .from("tickets")
-    .select("*, customer:customers!customer_id(id, name, email)")
+    .select("*, customer:customers!customer_id(id, name, email), assignee:users!assigned_to(id, full_name)")
     .eq("organization_id", organizationId)
     .order("last_message_at", { ascending: false });
 
@@ -106,7 +130,7 @@ export async function getTicket(organizationId: string, ticketId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("tickets")
-    .select("*, customer:customers!customer_id(id, name, email)")
+    .select("*, customer:customers!customer_id(id, name, email), assignee:users!assigned_to(id, full_name)")
     .eq("organization_id", organizationId)
     .eq("id", ticketId)
     .single();
@@ -178,7 +202,7 @@ export async function listRecentTickets(organizationId: string, limit = 6) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("tickets")
-    .select("*, customer:customers!customer_id(id, name, email)")
+    .select("*, customer:customers!customer_id(id, name, email), assignee:users!assigned_to(id, full_name)")
     .eq("organization_id", organizationId)
     .order("last_message_at", { ascending: false })
     .limit(limit);

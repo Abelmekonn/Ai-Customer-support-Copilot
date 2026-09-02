@@ -9,8 +9,8 @@ export async function rotateInboundSecretAction(
   _formData: FormData,
 ): Promise<{ error?: string; success?: string }> {
   const user = await requireUser();
-  if (user.role !== "admin" && user.role !== "manager") {
-    return { error: "Only admins and managers can rotate the inbound secret." };
+  if (user.role !== "admin") {
+    return { error: "Only admins can rotate the inbound secret." };
   }
 
   try {
