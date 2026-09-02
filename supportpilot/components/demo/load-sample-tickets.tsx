@@ -20,6 +20,7 @@ export function LoadSampleTickets() {
       return;
     }
     router.refresh();
+    router.push("/dashboard/tickets");
   }
 
   return (

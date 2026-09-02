@@ -18,19 +18,26 @@ export default async function DashboardPage() {
   const totalTickets = stats.openTickets + stats.pendingTickets + stats.resolvedTickets;
 
   return (
-    <div className="mx-auto h-full max-w-6xl space-y-8 overflow-y-auto p-6">
+    <div className="h-full min-h-0 w-full space-y-8 overflow-y-auto p-6">
       <div>
         <h1 className="typo-heading-1">
           {org?.name ?? "Workspace"}
         </h1>
         <p className="typo-subtitle mt-2 text-ink-tint">
           {totalTickets === 0
-            ? "Load a realistic inbox to walk the ticket workspace before RAG is wired up."
+            ? org?.is_demo
+              ? "Load a sample inbox to walk the ticket workspace, or forward mail to the inbound address in Settings."
+              : "Forward customer email to the inbound address in Settings. New mail becomes a ticket."
             : "Open tickets, copilot assists, and the queue that needs a human."}
         </p>
       </div>
 
-      {totalTickets === 0 ? <LoadSampleTickets /> : null}
+      {totalTickets === 0 && org?.is_demo ? <LoadSampleTickets /> : null}
+      {totalTickets === 0 && !org?.is_demo ? (
+        <Link href="/dashboard/settings" className="text-[14px] font-medium text-primary">
+          Open inbound settings
+        </Link>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Open tickets" value={stats.openTickets} />
@@ -50,31 +57,44 @@ export default async function DashboardPage() {
           {recent.length === 0 ? (
             <p className="px-6 pb-6 text-[14px] text-steel">Nothing in the queue yet.</p>
           ) : (
-            <ul className="divide-y divide-hairline-soft">
-              {recent.map((ticket) => (
-                <li key={ticket.id}>
-                  <Link
-                    href={`/dashboard/tickets/${ticket.id}`}
-                    className="flex items-center gap-4 px-6 py-3.5 hover:bg-cream-light"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium">{ticket.subject}</p>
-                      <p className="text-[14px] text-steel">
-                        {ticket.customer.name} · {ticket.category}
-                      </p>
-                    </div>
-                    <StatusBadge status={ticket.status} />
-                    <PriorityBadge priority={ticket.priority} />
-                    <span className="hidden w-28 text-right font-mono text-[13px] text-steel sm:block">
-                      {formatTicketNumber(ticket.ticket_number)}
-                    </span>
-                    <span className="hidden w-28 text-right text-[13px] text-steel md:block">
-                      {formatRelativeTime(ticket.last_message_at)}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <div>
+              <div className="grid grid-cols-[minmax(0,1fr)_6.25rem_5.75rem] gap-x-3 border-b border-hairline-soft px-6 py-2 sm:grid-cols-[minmax(0,1fr)_6.25rem_5.75rem_7rem] md:grid-cols-[minmax(0,1fr)_6.25rem_5.75rem_7rem_7.5rem]">
+                <p className="typo-eyebrow text-steel">Ticket</p>
+                <p className="typo-eyebrow text-steel">Status</p>
+                <p className="typo-eyebrow text-steel">Priority</p>
+                <p className="typo-eyebrow hidden text-steel sm:block">ID</p>
+                <p className="typo-eyebrow hidden text-right text-steel md:block">Updated</p>
+              </div>
+              <ul className="divide-y divide-hairline-soft">
+                {recent.map((ticket) => (
+                  <li key={ticket.id}>
+                    <Link
+                      href={`/dashboard/tickets/${ticket.id}`}
+                      className="grid grid-cols-[minmax(0,1fr)_6.25rem_5.75rem] items-center gap-x-3 px-6 py-3.5 hover:bg-cream-light sm:grid-cols-[minmax(0,1fr)_6.25rem_5.75rem_7rem] md:grid-cols-[minmax(0,1fr)_6.25rem_5.75rem_7rem_7.5rem]"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{ticket.subject}</p>
+                        <p className="truncate text-[14px] text-steel">
+                          {ticket.customer.name} · {ticket.category}
+                        </p>
+                      </div>
+                      <div>
+                        <StatusBadge status={ticket.status} />
+                      </div>
+                      <div>
+                        <PriorityBadge priority={ticket.priority} />
+                      </div>
+                      <span className="hidden font-mono text-[13px] text-steel sm:block">
+                        {formatTicketNumber(ticket.ticket_number)}
+                      </span>
+                      <span className="hidden text-right text-[13px] text-steel md:block">
+                        {formatRelativeTime(ticket.last_message_at)}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </CardContent>
       </Card>

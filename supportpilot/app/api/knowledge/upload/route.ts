@@ -1,5 +1,9 @@
+import { after } from "next/server";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { enqueueIndexDocument } from "@/lib/jobs/queue";
+import { runPendingJobs } from "@/lib/jobs/run";
+import { getStorageFileNameError, getStorageUploadError } from "@/lib/validation/document";
 
 const ALLOWED = new Map([
   ["application/pdf", "pdf"],
@@ -42,8 +46,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Choose a file to upload." }, { status: 400 });
   }
 
-  const fileType =
-    ALLOWED.get(file.type) ?? fileTypeFromName(file.name);
+  const fileType = ALLOWED.get(file.type) ?? fileTypeFromName(file.name);
 
   if (!fileType) {
     return NextResponse.json(
@@ -52,13 +55,18 @@ export async function POST(request: Request) {
     );
   }
 
+  const fileNameError = getStorageFileNameError(file.name);
+  if (fileNameError) {
+    return NextResponse.json({ error: fileNameError }, { status: 400 });
+  }
+
   const { data: document, error: insertError } = await supabase
     .from("knowledge_documents")
     .insert({
       organization_id: profile.organization_id,
       name: file.name,
       file_type: fileType,
-      status: "uploading",
+      status: "queued",
       uploaded_by: user.id,
     })
     .select("id")
@@ -79,15 +87,23 @@ export async function POST(request: Request) {
   if (storageError) {
     await supabase
       .from("knowledge_documents")
-      .update({ status: "failed", error_message: storageError.message })
+      .update({ status: "failed", error_message: getStorageUploadError(storageError.message, file.name) })
       .eq("id", document.id);
-    return NextResponse.json({ error: storageError.message }, { status: 500 });
+    return NextResponse.json(
+      { error: getStorageUploadError(storageError.message, file.name) },
+      { status: 400 },
+    );
   }
 
   await supabase
     .from("knowledge_documents")
-    .update({ file_path: path, status: "uploading" })
+    .update({ file_path: path, status: "queued" })
     .eq("id", document.id);
 
-  return NextResponse.json({ ok: true, id: document.id });
+  await enqueueIndexDocument(profile.organization_id, document.id);
+  after(() => {
+    void runPendingJobs();
+  });
+
+  return NextResponse.json({ ok: true, id: document.id, queued: true });
 }

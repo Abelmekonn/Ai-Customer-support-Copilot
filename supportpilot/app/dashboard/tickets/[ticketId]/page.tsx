@@ -5,8 +5,9 @@ import { PriorityBadge, StatusBadge } from "@/components/tickets/ticket-badges";
 import { ReplyComposer } from "@/components/tickets/reply-composer";
 import { TicketMessage } from "@/components/tickets/ticket-message";
 import { TicketStatusActions } from "@/components/tickets/ticket-status-actions";
-import { getCurrentUser, getTicket, listMessages } from "@/lib/data";
+import { getCurrentUser, getLatestGeneration, getTicket, listGenerationSources, listMessageAttachments, listMessages } from "@/lib/data";
 import { formatTicketNumber } from "@/lib/utils";
+import type { CopilotResult } from "@/lib/ai/types";
 
 export default async function TicketWorkspacePage({
   params,
@@ -21,9 +22,13 @@ export default async function TicketWorkspacePage({
   if (!ticket) notFound();
 
   const messages = await listMessages(ticket.id);
+  const attachments = await listMessageAttachments(ticket.id);
+  const generation = await getLatestGeneration(ticket.id);
+  const sources = generation ? await listGenerationSources(generation.id) : [];
+  const result = generationToResult(generation, sources);
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
       <div className="flex items-center justify-between gap-4 border-b border-hairline-soft bg-canvas px-5 py-3">
         <div>
           <div className="flex items-center gap-2">
@@ -41,8 +46,8 @@ export default async function TicketWorkspacePage({
         <TicketStatusActions ticketId={ticket.id} status={ticket.status} />
       </div>
 
-      <div className="grid min-h-0 flex-1 lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="flex min-h-0 flex-col border-r border-border">
+      <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col lg:flex-row">
+        <section className="flex min-h-0 min-w-0 flex-1 flex-col lg:border-r lg:border-white/10">
           <div className="border-b border-border px-5 py-4">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Customer</p>
             <p className="mt-1 font-medium">{ticket.customer.name}</p>
@@ -55,14 +60,31 @@ export default async function TicketWorkspacePage({
                 message={message}
                 customerName={ticket.customer.name}
                 agentName={user.full_name}
+                attachments={attachments.filter((attachment) => attachment.message_id === message.id)}
               />
             ))}
           </div>
           <ReplyComposer ticketId={ticket.id} />
         </section>
-        <CopilotPanel result={null} />
+        <CopilotPanel ticketId={ticket.id} result={result} />
       </div>
-      <SourceList sources={[]} />
+      <SourceList sources={result?.sources ?? []} />
     </div>
   );
+}
+
+function generationToResult(
+  generation: Awaited<ReturnType<typeof getLatestGeneration>>,
+  sources: CopilotResult["sources"],
+): CopilotResult | null {
+  if (!generation) return null;
+  return {
+    intent: generation.intent ?? "Unclassified",
+    category: generation.category ?? "other",
+    urgency: generation.urgency ?? "medium",
+    confidence: Number(generation.confidence ?? 0),
+    response: generation.edited_response ?? generation.response,
+    sources,
+    needsHumanReview: generation.needs_human_review,
+  };
 }

@@ -19,6 +19,19 @@ export async function POST() {
 
   const organizationId = profile.organization_id as string;
 
+  const { data: organization } = await supabase
+    .from("organizations")
+    .select("is_demo")
+    .eq("id", organizationId)
+    .single();
+
+  if (organization && organization.is_demo === false) {
+    return NextResponse.json(
+      { error: "Sample tickets are only available in a demo workspace. Forward mail to your inbound address instead." },
+      { status: 403 },
+    );
+  }
+
   const { count } = await supabase
     .from("tickets")
     .select("*", { count: "exact", head: true })

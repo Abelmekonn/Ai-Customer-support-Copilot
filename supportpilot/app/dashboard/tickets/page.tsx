@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { TicketFilters } from "@/components/tickets/ticket-filters";
 import { TicketList } from "@/components/tickets/ticket-list";
-import { getCurrentUser, listTickets } from "@/lib/data";
+import { getCurrentUser, getOrganization, listTickets } from "@/lib/data";
 
 export default async function TicketsPage({
   searchParams,
@@ -15,7 +15,8 @@ export default async function TicketsPage({
   const status = params.status ?? "open";
   const query = (params.q ?? "").trim().toLowerCase();
 
-  const [open, pending, resolved, tickets] = await Promise.all([
+  const [org, open, pending, resolved, tickets] = await Promise.all([
+    getOrganization(user.organization_id),
     listTickets(user.organization_id, "open"),
     listTickets(user.organization_id, "pending"),
     listTickets(user.organization_id, "resolved"),
@@ -32,7 +33,7 @@ export default async function TicketsPage({
     : tickets;
 
   return (
-    <div className="flex h-full min-h-0">
+    <div className="flex h-full min-h-0 w-full min-w-0">
       <Suspense>
         <TicketFilters
           counts={{
@@ -42,7 +43,12 @@ export default async function TicketsPage({
           }}
         />
       </Suspense>
-      <TicketList tickets={filtered} />
+      <TicketList
+        tickets={filtered}
+        status={status as "open" | "pending" | "resolved"}
+        totalInOrg={open.length + pending.length + resolved.length}
+        isDemo={org?.is_demo !== false}
+      />
     </div>
   );
 }

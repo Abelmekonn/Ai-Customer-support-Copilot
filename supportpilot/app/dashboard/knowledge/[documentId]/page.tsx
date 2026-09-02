@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { IndexingPoller } from "@/components/knowledge/indexing-poller";
 import { ProcessingStatus } from "@/components/knowledge/processing-status";
+import { RetryIndexButton } from "@/components/knowledge/retry-index-button";
 import { getCurrentUser } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 
@@ -24,17 +26,19 @@ export default async function DocumentPage({
   if (!document) notFound();
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-6">
+    <div className="h-full min-h-0 w-full space-y-6 overflow-y-auto p-6">
+      <IndexingPoller statuses={[document.status]} />
       <div>
         <p className="text-xs text-muted-foreground">Document</p>
         <h1 className="mt-1 typo-heading-1">{document.name}</h1>
-        <div className="mt-2 flex items-center gap-2">
-          <Badge variant={document.status === "indexed" ? "default" : "secondary"}>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <Badge variant={document.status === "indexed" ? "default" : document.status === "failed" ? "high" : "secondary"}>
             {document.status}
           </Badge>
           <span className="text-xs text-muted-foreground">
             {document.file_type.toUpperCase()}
           </span>
+          <RetryIndexButton documentId={document.id} status={document.status} />
         </div>
       </div>
       {document.error_message ? (

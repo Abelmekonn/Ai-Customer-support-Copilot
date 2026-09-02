@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import type { Message } from "@/lib/types";
+import type { Message, MessageAttachment } from "@/lib/types";
 import { cn, formatRelativeTime, initials } from "@/lib/utils";
 
 const SENDER_LABEL = {
@@ -12,10 +12,12 @@ export function TicketMessage({
   message,
   customerName,
   agentName,
+  attachments = [],
 }: {
   message: Message;
   customerName?: string;
   agentName?: string;
+  attachments?: (MessageAttachment & { url: string | null })[];
 }) {
   const isCustomer = message.sender_type === "customer";
   const label =
@@ -26,7 +28,7 @@ export function TicketMessage({
         : SENDER_LABEL.ai;
 
   return (
-    <article className={cn("mb-4 max-w-[36rem]", isCustomer ? "mr-auto" : "ml-auto")}>
+    <article className={cn("mb-4 w-full max-w-3xl", isCustomer ? "mr-auto" : "ml-auto")}>
       <div className="mb-1 flex items-center gap-2">
         <span className="flex size-6 items-center justify-center rounded-full bg-cream text-[10px] font-semibold">
           {initials(label)}
@@ -45,6 +47,26 @@ export function TicketMessage({
       >
         {message.content}
       </div>
+      {attachments.length > 0 ? (
+        <ul className="mt-2 space-y-1">
+          {attachments.map((attachment) => (
+            <li key={attachment.id}>
+              {attachment.url ? (
+                <a
+                  href={attachment.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[13px] text-primary underline-offset-2 hover:underline"
+                >
+                  {attachment.file_name}
+                </a>
+              ) : (
+                <span className="text-[13px] text-steel">{attachment.file_name}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </article>
   );
 }

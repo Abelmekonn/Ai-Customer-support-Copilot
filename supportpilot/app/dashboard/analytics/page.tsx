@@ -10,7 +10,7 @@ export default async function AnalyticsPage() {
   const assistedRate = total === 0 ? 0 : Math.round((stats.aiAssisted / total) * 100);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-6">
+    <div className="h-full min-h-0 w-full space-y-6 overflow-y-auto p-6">
       <div>
         <h1 className="typo-heading-1">Analytics</h1>
         <p className="typo-subtitle mt-2 text-ink-tint">

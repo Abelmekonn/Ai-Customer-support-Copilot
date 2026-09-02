@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { RetryIndexButton } from "@/components/knowledge/retry-index-button";
 import type { KnowledgeDocument } from "@/lib/types";
 
 const statusLabel: Record<KnowledgeDocument["status"], string> = {
+  queued: "Queued",
   uploading: "Uploading",
   extracting: "Extracting",
   chunking: "Chunking",
@@ -29,29 +31,30 @@ export function DocumentList({ documents }: { documents: KnowledgeDocument[] }) 
   return (
     <ul className="divide-y divide-hairline-soft overflow-hidden rounded-lg border border-hairline-soft bg-canvas">
       {documents.map((doc) => (
-        <li key={doc.id}>
-          <Link
-            href={`/dashboard/knowledge/${doc.id}`}
-            className="flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-cream-light"
-          >
-            <div className="flex min-w-0 items-center gap-3">
-              <FileText className="size-4 shrink-0 text-primary" />
-              <div className="min-w-0">
-                <p className="truncate font-medium">{doc.name}</p>
-                <p className="text-[13px] text-steel">
-                  {doc.file_type.toUpperCase()} ·{" "}
-                  {new Date(doc.created_at).toLocaleDateString("en", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </p>
-              </div>
+        <li key={doc.id} className="flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-cream-light">
+          <Link href={`/dashboard/knowledge/${doc.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+            <FileText className="size-4 shrink-0 text-primary" />
+            <div className="min-w-0">
+              <p className="truncate font-medium">{doc.name}</p>
+              <p className="text-[13px] text-steel">
+                {doc.file_type.toUpperCase()} ·{" "}
+                {new Date(doc.created_at).toLocaleDateString("en", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </p>
+              {doc.error_message ? (
+                <p className="mt-1 truncate text-[12px] text-primary">{doc.error_message}</p>
+              ) : null}
             </div>
-            <Badge variant={doc.status === "indexed" ? "default" : "secondary"}>
+          </Link>
+          <div className="flex shrink-0 items-center gap-3">
+            <RetryIndexButton documentId={doc.id} status={doc.status} />
+            <Badge variant={doc.status === "indexed" ? "default" : doc.status === "failed" ? "high" : "secondary"}>
               {statusLabel[doc.status]}
             </Badge>
-          </Link>
+          </div>
         </li>
       ))}
     </ul>

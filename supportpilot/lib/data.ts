@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { AppUser, Customer, KnowledgeDocument, Message, Organization, TicketWithCustomer } from "@/lib/types";
+import type { CopilotSource } from "@/lib/ai/types";
+import type { AiGeneration, AppUser, Customer, KnowledgeDocument, Message, MessageAttachment, Organization, TicketWithCustomer } from "@/lib/types";
 
 export async function getCurrentUser() {
   const supabase = await createClient();
@@ -37,7 +38,7 @@ export async function getOrganization(organizationId: string) {
     .eq("id", organizationId)
     .single();
 
-  return data as Organization | null;
+  return data ? ({ ...data, is_demo: data.is_demo !== false } as Organization) : null;
 }
 
 export async function getDashboardStats(organizationId: string) {
@@ -126,6 +127,29 @@ export async function listMessages(ticketId: string) {
   return (data ?? []) as Message[];
 }
 
+export async function listMessageAttachments(ticketId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("message_attachments")
+    .select("*")
+    .eq("ticket_id", ticketId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+
+  const rows = (data ?? []) as MessageAttachment[];
+  const withUrls = await Promise.all(
+    rows.map(async (attachment) => {
+      const { data: signed } = await supabase.storage
+        .from("ticket-attachments")
+        .createSignedUrl(attachment.file_path, 3600);
+      return { ...attachment, url: signed?.signedUrl ?? null };
+    }),
+  );
+
+  return withUrls;
+}
+
 export async function listCustomers(organizationId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -161,4 +185,66 @@ export async function listRecentTickets(organizationId: string, limit = 6) {
 
   if (error) throw error;
   return (data ?? []) as TicketWithCustomer[];
+}
+
+export async function getLatestGeneration(ticketId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("ai_generations")
+    .select("*")
+    .eq("ticket_id", ticketId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data ?? null) as AiGeneration | null;
+}
+
+export async function listGenerationSources(generationId: string): Promise<CopilotSource[]> {
+  const supabase = await createClient();
+  const { data: citations, error } = await supabase
+    .from("citations")
+    .select("chunk_id, similarity")
+    .eq("generation_id", generationId);
+
+  if (error) throw error;
+  if (!citations?.length) return [];
+
+  const chunkIds = citations.map((citation) => citation.chunk_id);
+  const { data: chunks, error: chunksError } = await supabase
+    .from("knowledge_chunks")
+    .select("id, document_id, page_number, knowledge_documents(name)")
+    .in("id", chunkIds);
+
+  if (chunksError) throw chunksError;
+
+  const chunkById = new Map(
+    (chunks ?? []).map((chunk) => {
+      const document = chunk.knowledge_documents as { name?: string } | { name?: string }[] | null;
+      const name = Array.isArray(document) ? document[0]?.name : document?.name;
+      return [
+        chunk.id as string,
+        {
+          documentId: chunk.document_id as string,
+          pageNumber: (chunk.page_number as number | null) ?? undefined,
+          documentName: name ?? "Knowledge document",
+        },
+      ];
+    }),
+  );
+
+  return citations.flatMap((citation) => {
+    const chunk = chunkById.get(citation.chunk_id);
+    if (!chunk) return [];
+    return [
+      {
+        chunkId: citation.chunk_id,
+        documentId: chunk.documentId,
+        documentName: chunk.documentName,
+        pageNumber: chunk.pageNumber,
+        similarity: Number(citation.similarity),
+      },
+    ];
+  });
 }

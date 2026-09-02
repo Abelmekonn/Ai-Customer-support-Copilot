@@ -13,9 +13,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     <div className="flex h-screen flex-col overflow-hidden bg-black">
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <AppSidebar />
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <AppHeader name={user.full_name} role={user.role} />
-          <div className="min-h-0 flex-1 overflow-hidden bg-surface">{children}</div>
+          <div className="min-h-0 min-w-0 flex-1 overflow-hidden bg-black">{children}</div>
         </div>
       </div>
       <SunsetStripe />

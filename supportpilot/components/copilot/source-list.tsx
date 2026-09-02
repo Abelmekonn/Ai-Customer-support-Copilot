@@ -7,8 +7,8 @@ export function SourceList({ sources }: { sources: CopilotSource[] }) {
       <p className="typo-eyebrow text-steel">Sources</p>
       {sources.length === 0 ? (
         <p className="mt-2 text-[14px] text-steel">
-          Citations appear after retrieval. Nothing is invented without a document
-          behind it.
+          No matching policy. Do not promise a refund or cite a rule — ask or
+          escalate.
         </p>
       ) : (
         <ul className="mt-2 flex flex-wrap gap-2">

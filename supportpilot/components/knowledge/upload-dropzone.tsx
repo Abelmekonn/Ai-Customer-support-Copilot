@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Upload } from "lucide-react";
+import { getStorageFileNameError } from "@/lib/validation/document";
 
 const ACCEPT = ".pdf,.txt,.md,application/pdf,text/plain,text/markdown";
 
@@ -14,6 +15,13 @@ export function UploadDropzone() {
   async function onFiles(files: FileList | null) {
     const file = files?.[0];
     if (!file) return;
+
+    const fileNameError = getStorageFileNameError(file.name);
+    if (fileNameError) {
+      setError(fileNameError);
+      return;
+    }
+
     setPending(true);
     setError(null);
 
@@ -42,10 +50,13 @@ export function UploadDropzone() {
         {pending ? "Uploading…" : "Drop a PDF, Markdown, or text file"}
       </p>
       <p className="mt-1 max-w-md text-[13px] text-steel">
-        Files are stored in your workspace. Extraction, chunking, and embeddings
-        are the next stage.
+        The file is stored immediately. Indexing runs in the background.
       </p>
-      {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
+      {error ? (
+        <p className="mt-3 max-w-md text-[14px] leading-6 text-primary" role="alert">
+          {error}
+        </p>
+      ) : null}
       <input
         type="file"
         accept={ACCEPT}

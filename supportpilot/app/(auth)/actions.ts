@@ -1,8 +1,17 @@
 "use server";
 
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+
+async function confirmEmail(userId: string) {
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(userId, {
+    email_confirm: true,
+  });
+  return error;
+}
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -71,7 +80,20 @@ export async function loginAction(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
+  let { error } = await supabase.auth.signInWithPassword(parsed.data);
+
+  if (error?.message.toLowerCase().includes("email not confirmed")) {
+    const admin = createAdminClient();
+    const { data: users } = await admin.auth.admin.listUsers();
+    const user = users.users.find(
+      (entry) => entry.email?.toLowerCase() === parsed.data.email.toLowerCase(),
+    );
+
+    if (user) {
+      await confirmEmail(user.id);
+      ({ error } = await supabase.auth.signInWithPassword(parsed.data));
+    }
+  }
 
   if (error) {
     return errorState(error.message, formData);
@@ -112,6 +134,10 @@ export async function registerAction(
 
   if (error) {
     return errorState(error.message, formData);
+  }
+
+  if (data.user && !data.session) {
+    await confirmEmail(data.user.id);
   }
 
   if (!data.session) {

@@ -1,0 +1,16 @@
+---
+description: SupportPilot is hosted AI-as-a-service for human agents. Follow the implementation plan; do not build a customer chatbot.
+alwaysApply: true
+---
+
+# SupportPilot product
+
+- **What we sell:** hosted copilot for *human* support agents (draft + citations). We run models, embeddings, and retrieval. Customers do not bring keys in v1.
+- **What we never build:** a customer-facing chatbot or auto-send without an agent.
+- **Plan:** `docs/implementation-plan.md` is the source of truth. Implement **one phase at a time**. Do not skip to Zendesk, Stripe, or hybrid search before Phase 1 RAG and Phase 2–3 email in/out.
+- **App root:** `supportpilot/`.
+- **Ground or refuse:** after Phase 1, Generate draft must retrieve this org’s chunks or explicitly refuse. Do not invent policy. Do not leave sources empty while implying the draft is grounded.
+- **Jobs:** indexing, ingest, and send belong in background jobs, not long-lived upload/draft HTTP handlers.
+- **Tenancy:** all queries, storage paths, and vector search are `organization_id`-scoped.
+- **Demo seed** is a sandbox, not ticket intake.
+- User-facing errors must be actionable (retry, wait, rename file), not raw provider messages.

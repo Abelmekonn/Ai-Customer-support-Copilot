@@ -1,34 +1,43 @@
 import { ConfidenceScore } from "@/components/copilot/confidence-score";
+import { GenerateDraftButton } from "@/components/copilot/generate-draft-button";
 import { IntentCard } from "@/components/copilot/intent-card";
 import { ResponseEditor } from "@/components/copilot/response-editor";
-import { Button } from "@/components/ui/button";
 import type { CopilotResult } from "@/lib/ai/types";
-import Link from "next/link";
 
-export function CopilotPanel({ result }: { result: CopilotResult | null }) {
+export function CopilotPanel({
+  ticketId,
+  result,
+}: {
+  ticketId: string;
+  result: CopilotResult | null;
+}) {
   return (
-    <aside className="flex min-h-0 flex-col bg-black">
+    <aside className="flex min-h-0 w-full shrink-0 flex-col border-t border-white/10 bg-black lg:w-[380px] lg:border-t-0">
       <div className="border-b border-white/10 px-5 py-4">
         <p className="typo-eyebrow text-steel">AI copilot</p>
         <p className="mt-2 text-[14px] leading-[1.5] text-ink-tint">
-          Assists the agent. Never sends on its own.
+          Drafts from indexed policy. You review and send.
         </p>
       </div>
       <div className="flex-1 space-y-5 overflow-auto px-5 py-4">
         <IntentCard intent={result?.intent} category={result?.category} />
         <ConfidenceScore value={result?.confidence} />
         {result ? (
-          <ResponseEditor initialValue={result.response} />
+          <ResponseEditor
+            key={result.response}
+            ticketId={ticketId}
+            initialValue={result.response}
+          />
         ) : (
           <div className="rounded-lg border border-white/10 bg-[#111] p-6">
-            <p className="text-[16px] font-medium">Drafts need a knowledge base</p>
+            <p className="text-[16px] font-medium">Draft a reply from this ticket</p>
             <p className="mt-2 text-[14px] leading-[1.5] text-steel">
-              Upload policies, FAQs, and product docs so retrieval can ground the
-              reply.
+              The copilot searches your knowledge base. If nothing matches, it
+              will refuse instead of inventing policy.
             </p>
-            <Button className="mt-4" size="sm" variant="dark" asChild>
-              <Link href="/dashboard/knowledge">Open knowledge base</Link>
-            </Button>
+            <div className="mt-4">
+              <GenerateDraftButton ticketId={ticketId} />
+            </div>
           </div>
         )}
       </div>

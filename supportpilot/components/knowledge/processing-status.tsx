@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import type { DocumentStatus } from "@/lib/types";
 
 const STEPS: { id: DocumentStatus; label: string }[] = [
-  { id: "uploading", label: "Uploading" },
+  { id: "queued", label: "Queued" },
   { id: "extracting", label: "Extracting" },
   { id: "chunking", label: "Chunking" },
   { id: "embedding", label: "Embedding" },
@@ -10,15 +10,17 @@ const STEPS: { id: DocumentStatus; label: string }[] = [
 ];
 
 export function ProcessingStatus({ current }: { current?: DocumentStatus }) {
-  const currentIndex = current
-    ? STEPS.findIndex((step) => step.id === current)
+  const normalized: DocumentStatus | undefined =
+    current === "uploading" ? "queued" : current === "failed" ? undefined : current;
+  const currentIndex = normalized
+    ? STEPS.findIndex((step) => step.id === normalized)
     : -1;
 
   return (
     <ol className="grid gap-2 sm:grid-cols-5">
       {STEPS.map((step, index) => {
-        const done = currentIndex > index || current === "indexed";
-        const active = step.id === current && current !== "indexed";
+        const done = currentIndex > index || normalized === "indexed";
+        const active = step.id === normalized && normalized !== "indexed";
         return (
           <li
             key={step.id}
