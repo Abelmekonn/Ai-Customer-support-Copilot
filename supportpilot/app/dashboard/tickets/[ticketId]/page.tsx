@@ -3,6 +3,7 @@ import { CopilotPanel } from "@/components/copilot/copilot-panel";
 import { SourceList } from "@/components/copilot/source-list";
 import { PriorityBadge, StatusBadge } from "@/components/tickets/ticket-badges";
 import { ReplyComposer } from "@/components/tickets/reply-composer";
+import { SendStatusPoller } from "@/components/tickets/send-status-poller";
 import { TicketMessage } from "@/components/tickets/ticket-message";
 import { TicketStatusActions } from "@/components/tickets/ticket-status-actions";
 import { getCurrentUser, getLatestGeneration, getTicket, listGenerationSources, listMessageAttachments, listMessages } from "@/lib/data";
@@ -26,9 +27,11 @@ export default async function TicketWorkspacePage({
   const generation = await getLatestGeneration(ticket.id);
   const sources = generation ? await listGenerationSources(generation.id) : [];
   const result = generationToResult(generation, sources);
+  const sending = messages.some((message) => message.send_status === "queued");
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
+      <SendStatusPoller active={sending} />
       <div className="flex items-center justify-between gap-4 border-b border-hairline-soft bg-canvas px-5 py-3">
         <div>
           <div className="flex items-center gap-2">
@@ -66,7 +69,7 @@ export default async function TicketWorkspacePage({
           </div>
           <ReplyComposer ticketId={ticket.id} />
         </section>
-        <CopilotPanel ticketId={ticket.id} result={result} />
+        <CopilotPanel ticketId={ticket.id} generationId={generation?.id} result={result} />
       </div>
       <SourceList sources={result?.sources ?? []} />
     </div>

@@ -1,4 +1,4 @@
-export type JobType = "index_document" | "ingest_email";
+export type JobType = "index_document" | "ingest_email" | "send_email";
 export type JobStatus = "pending" | "running" | "succeeded" | "failed";
 
 export type Job = {
@@ -17,6 +17,10 @@ export type Job = {
 
 export type IndexDocumentPayload = {
   documentId: string;
+};
+
+export type SendEmailJobPayload = {
+  messageId: string;
 };
 
 export type IngestEmailJobPayload = {

@@ -1,6 +1,7 @@
 "use server";
 
 import { seedCustomers, seedTickets } from "@/lib/demo/seed-data";
+import { queueTicketReply } from "@/lib/channels/email/queue-reply";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
@@ -94,28 +95,23 @@ export async function sendTicketMessage(formData: FormData) {
   const parsed = sendMessageSchema.safeParse({
     ticketId: formData.get("ticketId"),
     content: formData.get("content"),
+    isInternal: formData.get("isInternal") === "true" || formData.get("isInternal") === "on",
   });
 
   if (!parsed.success) {
     return { error: "Write a reply before sending." };
   }
 
-  const supabase = await createClient();
-  const { error: messageError } = await supabase.from("messages").insert({
-    ticket_id: parsed.data.ticketId,
-    organization_id: user.organization_id,
-    sender_type: "agent",
-    sender_user_id: user.id,
+  const result = await queueTicketReply({
+    user,
+    ticketId: parsed.data.ticketId,
     content: parsed.data.content,
+    isInternal: parsed.data.isInternal ?? false,
   });
-
-  if (messageError) {
-    return { error: messageError.message };
-  }
 
   revalidatePath(`/dashboard/tickets/${parsed.data.ticketId}`);
   revalidatePath("/dashboard/tickets");
-  return { ok: true };
+  return result.error ? { error: result.error } : { ok: true };
 }
 
 export async function updateTicketStatus(formData: FormData) {

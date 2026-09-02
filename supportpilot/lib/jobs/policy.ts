@@ -8,7 +8,8 @@ export type JobAction =
   | { type: "fail-job"; error: string }
   | { type: "complete" }
   | { type: "reschedule"; error: string; delayMs: number }
-  | { type: "fail-document"; error: string };
+  | { type: "fail-document"; error: string }
+  | { type: "fail-message"; error: string };
 
 export function resolveIndexJobAction(input: {
   documentId: string;
@@ -29,4 +30,26 @@ export function resolveIndexJobAction(input: {
   }
 
   return { type: "fail-document", error: input.result.error };
+}
+
+export type SendProcessResult =
+  | { ok: true }
+  | { ok: false; error: string; retryable?: boolean };
+
+export function resolveSendJobAction(input: {
+  messageId: string;
+  attempts: number;
+  maxAttempts: number;
+  result: SendProcessResult;
+}): JobAction {
+  if (!input.messageId) {
+    return { type: "fail-job", error: "send_email missing messageId." };
+  }
+  if (input.result.ok) {
+    return { type: "complete" };
+  }
+  if (input.result.retryable && input.attempts < input.maxAttempts) {
+    return { type: "reschedule", error: input.result.error, delayMs: RATE_LIMIT_DELAY_MS };
+  }
+  return { type: "fail-message", error: input.result.error };
 }

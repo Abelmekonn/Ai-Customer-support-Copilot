@@ -20,4 +20,6 @@ export const updateTicketSchema = z.object({
 export const sendMessageSchema = z.object({
   ticketId: z.string().uuid(),
   content: z.string().min(1).max(8000),
+  isInternal: z.boolean().optional(),
+  generationId: z.string().uuid().optional(),
 });

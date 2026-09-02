@@ -26,7 +26,7 @@ If any step is fake (sample tickets only, draft with no sources, send only write
 | Tickets | Inbound email webhook creates tickets and threads. Demo seed stays behind `is_demo` |
 | Knowledge | Upload + extract/chunk/embed in the HTTP request. MiniMax RPM kills indexing |
 | Copilot | MiniMax draft from thread only. Empty sources. Dummy confidence |
-| Send | Inserts `messages`. Customer receives nothing |
+| Send | Resend outbound + audit. Internal notes stay local |
 | Analytics / settings | Shell pages |
 | Billing / invites | None |
 
@@ -128,6 +128,8 @@ Agent: Send        -->  send job   --> outbound email + audit row
 **Done when:** a Gmail/Outlook send to the inbound address appears in the inbox without seeding.
 
 ### Phase 3 — Email out + audit
+
+**Status:** applied (2026-09-02). Send enqueues `send_email`, Resend delivers with thread headers, messages store the provider id, and `send_audits` records generation/chunks/user. Internal notes stay local.
 
 **Outcome:** Send leaves the building.
 

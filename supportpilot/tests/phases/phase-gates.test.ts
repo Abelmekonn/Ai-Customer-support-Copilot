@@ -78,11 +78,22 @@ describe("Phase 2 — email in", () => {
 });
 
 describe("Phase 3 — email out + audit", () => {
-  it.todo("sends the edited draft through the mail provider and stores the provider id");
-  it("ticket send still only writes local messages", () => {
-    const source = readApp("app/dashboard/tickets/actions.ts");
-    expect(source).toContain("from(\"messages\")");
-    expect(source).not.toMatch(/resend|postmark|sendEmail/i);
+  it("sends the edited draft through the mail provider and stores the provider id", () => {
+    expect(existsApp("lib/channels/email/send.ts")).toBe(true);
+    expect(existsApp("lib/channels/email/outbound.ts")).toBe(true);
+    expect(existsApp("supabase/migrations/006_email_outbound.sql")).toBe(true);
+    const queue = readApp("lib/channels/email/queue-reply.ts");
+    expect(queue).toContain("enqueueSendEmail");
+    expect(queue).toContain("isInternal");
+    const outbound = readApp("lib/channels/email/outbound.ts");
+    expect(outbound).toContain("sendWithResend");
+    expect(outbound).toContain("send_audits");
+    expect(outbound).toContain("email_provider_id");
+    const run = readApp("lib/jobs/run.ts");
+    expect(run).toContain("send_email");
+    expect(run).toContain("deliverOutboundMessage");
+    const actions = readApp("app/dashboard/actions.ts");
+    expect(actions).toContain("queueTicketReply");
   });
 });
 

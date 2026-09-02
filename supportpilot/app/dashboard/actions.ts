@@ -3,44 +3,54 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/data";
+import { queueTicketReply, retryOutboundMessage } from "@/lib/channels/email/queue-reply";
 import { sendMessageSchema, updateTicketSchema } from "@/lib/validation/ticket";
 
 export type ActionState = { error?: string; success?: string };
 
 export async function sendReplyAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requireUser();
+  const generationRaw = String(formData.get("generationId") ?? "").trim();
   const parsed = sendMessageSchema.safeParse({
     ticketId: formData.get("ticketId"),
     content: formData.get("content"),
+    isInternal: formData.get("isInternal") === "true" || formData.get("isInternal") === "on",
+    generationId: generationRaw || undefined,
   });
 
   if (!parsed.success) {
     return { error: "Write a reply before sending." };
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase.from("messages").insert({
-    ticket_id: parsed.data.ticketId,
-    organization_id: user.organization_id,
-    sender_type: "agent",
-    sender_user_id: user.id,
+  const result = await queueTicketReply({
+    user,
+    ticketId: parsed.data.ticketId,
     content: parsed.data.content,
+    isInternal: parsed.data.isInternal ?? false,
+    generationId: parsed.data.generationId,
   });
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  await supabase
-    .from("tickets")
-    .update({ status: "pending" })
-    .eq("id", parsed.data.ticketId)
-    .eq("status", "open");
 
   revalidatePath(`/dashboard/tickets/${parsed.data.ticketId}`);
   revalidatePath("/dashboard/tickets");
   revalidatePath("/dashboard");
-  return { success: "Reply sent." };
+  return result;
+}
+
+export async function retryOutboundSendAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const user = await requireUser();
+  const messageId = String(formData.get("messageId") ?? "");
+  const ticketId = String(formData.get("ticketId") ?? "");
+  if (!messageId) return { error: "Missing reply." };
+
+  const result = await retryOutboundMessage({ user, messageId });
+  if (ticketId) {
+    revalidatePath(`/dashboard/tickets/${ticketId}`);
+    revalidatePath("/dashboard/tickets");
+  }
+  return result;
 }
 
 export async function updateTicketStatusAction(ticketId: string, status: "open" | "pending" | "resolved") {

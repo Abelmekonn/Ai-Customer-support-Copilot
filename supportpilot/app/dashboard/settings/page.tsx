@@ -1,6 +1,8 @@
 import { InboundMailboxCard } from "@/components/settings/inbound-mailbox-card";
+import { OutboundMailboxCard } from "@/components/settings/outbound-mailbox-card";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { ensureChannelAccount, inboundWebhookUrl } from "@/lib/channels/email/account";
+import { outboundFromLabel, outboundConfig } from "@/lib/channels/email/config";
 import { getCurrentUser, getOrganization } from "@/lib/data";
 import { notFound } from "next/navigation";
 
@@ -21,7 +23,7 @@ export default async function SettingsPage() {
       <div>
         <h1 className="typo-heading-1">Settings</h1>
         <p className="typo-subtitle mt-2 text-ink-tint">
-          Workspace identity and the inbound mailbox that creates tickets.
+          Workspace identity and the mailbox that receives and sends ticket email.
         </p>
       </div>
       <SettingsForm user={user} organization={organization} />
@@ -30,6 +32,11 @@ export default async function SettingsPage() {
         webhookUrl={inboundWebhookUrl()}
         webhookSecret={channel.webhook_secret}
         canManage={user.role === "admin" || user.role === "manager"}
+      />
+      <OutboundMailboxCard
+        configured={outboundConfig().configured}
+        fromAddress={outboundFromLabel()}
+        replyTo={channel.inbound_address}
       />
     </div>
   );

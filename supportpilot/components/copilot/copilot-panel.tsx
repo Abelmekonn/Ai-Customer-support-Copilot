@@ -6,9 +6,11 @@ import type { CopilotResult } from "@/lib/ai/types";
 
 export function CopilotPanel({
   ticketId,
+  generationId,
   result,
 }: {
   ticketId: string;
+  generationId?: string;
   result: CopilotResult | null;
 }) {
   return (
@@ -26,6 +28,7 @@ export function CopilotPanel({
           <ResponseEditor
             key={result.response}
             ticketId={ticketId}
+            generationId={generationId}
             initialValue={result.response}
           />
         ) : (

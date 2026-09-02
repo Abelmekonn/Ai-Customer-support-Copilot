@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { IngestEmailJobPayload, Job, JobType } from "@/lib/jobs/types";
+import type { IngestEmailJobPayload, Job, JobType, SendEmailJobPayload } from "@/lib/jobs/types";
 
 export async function enqueueJob(input: {
   organizationId: string;
@@ -40,6 +40,14 @@ export async function enqueueIngestEmail(organizationId: string, payload: Ingest
     organizationId,
     type: "ingest_email",
     payload,
+  });
+}
+
+export async function enqueueSendEmail(organizationId: string, payload: SendEmailJobPayload) {
+  return enqueueJob({
+    organizationId,
+    type: "send_email",
+    payload: { messageId: payload.messageId },
   });
 }
 

@@ -69,6 +69,11 @@ export type Message = {
   content: string;
   email_message_id: string | null;
   email_in_reply_to: string | null;
+  email_provider_id: string | null;
+  is_internal: boolean;
+  send_status: "queued" | "sent" | "failed" | null;
+  send_error: string | null;
+  generation_id: string | null;
   created_at: string;
 };
 

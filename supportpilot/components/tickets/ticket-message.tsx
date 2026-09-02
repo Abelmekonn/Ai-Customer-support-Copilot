@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { RetrySendButton } from "@/components/tickets/retry-send-button";
 import type { Message, MessageAttachment } from "@/lib/types";
 import { cn, formatRelativeTime, initials } from "@/lib/utils";
 
@@ -20,6 +21,7 @@ export function TicketMessage({
   attachments?: (MessageAttachment & { url: string | null })[];
 }) {
   const isCustomer = message.sender_type === "customer";
+  const isInternal = Boolean(message.is_internal);
   const label =
     message.sender_type === "customer"
       ? customerName ?? SENDER_LABEL.customer
@@ -35,6 +37,16 @@ export function TicketMessage({
         </span>
         <span className="text-[13px] font-medium">{label}</span>
         {message.sender_type === "ai" ? <Badge variant="default">AI</Badge> : null}
+        {isInternal ? <Badge variant="medium">Internal</Badge> : null}
+        {message.send_status === "queued" ? (
+          <span className="text-[12px] text-steel">Sending…</span>
+        ) : null}
+        {message.send_status === "sent" ? (
+          <span className="text-[12px] text-steel">Sent</span>
+        ) : null}
+        {message.send_status === "failed" ? (
+          <span className="text-[12px] text-destructive">Not sent</span>
+        ) : null}
         <span className="text-[13px] text-steel">
           {formatRelativeTime(message.created_at)}
         </span>
@@ -42,11 +54,19 @@ export function TicketMessage({
       <div
         className={cn(
           "rounded-lg px-3.5 py-2.5 text-[16px] leading-[1.55]",
-          isCustomer ? "bg-[#141414]" : "border border-white/10 bg-black",
+          isCustomer ? "bg-[#141414]" : isInternal ? "border border-dashed border-white/20 bg-black" : "border border-white/10 bg-black",
         )}
       >
         {message.content}
       </div>
+      {message.send_status === "failed" ? (
+        <div className="mt-2">
+          <p className="text-[13px] text-destructive">
+            {message.send_error ?? "The reply could not be sent. Retry when you’re ready."}
+          </p>
+          <RetrySendButton ticketId={message.ticket_id} messageId={message.id} />
+        </div>
+      ) : null}
       {attachments.length > 0 ? (
         <ul className="mt-2 space-y-1">
           {attachments.map((attachment) => (
