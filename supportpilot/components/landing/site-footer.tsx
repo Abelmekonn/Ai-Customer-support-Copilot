@@ -3,35 +3,43 @@ import { BrandMark } from "@/components/brand/brand-mark";
 import { SunsetStripe } from "@/components/brand/sunset-stripe";
 import { Reveal } from "@/components/motion/reveal";
 
-const columns = [
-  {
-    title: "Product",
-    links: [
-      ["Tickets", "/dashboard/tickets"],
-      ["Knowledge", "/dashboard/knowledge"],
-      ["Analytics", "/dashboard/analytics"],
-      ["Pipeline", "/#pipeline"],
-    ],
-  },
-  {
-    title: "Workspace",
-    links: [
-      ["Sign in", "/login"],
-      ["Create workspace", "/register"],
-      ["Settings", "/dashboard/settings"],
-    ],
-  },
-  {
-    title: "Company",
-    links: [
-      ["Why it exists", "/#product"],
-      ["How the pipeline works", "/#pipeline"],
-      ["Start a workspace", "/register"],
-    ],
-  },
-] as const;
+function footerColumns(signedIn: boolean) {
+  return [
+    {
+      title: "Product",
+      links: [
+        ["Tickets", "/dashboard/tickets"],
+        ["Knowledge", "/dashboard/knowledge"],
+        ["Analytics", "/dashboard/analytics"],
+        ["Pipeline", "/#pipeline"],
+      ],
+    },
+    {
+      title: "Workspace",
+      links: signedIn
+        ? [
+            ["Open workspace", "/dashboard"],
+            ["Settings", "/dashboard/settings"],
+          ]
+        : [
+            ["Sign in", "/login"],
+            ["Create workspace", "/register"],
+            ["Settings", "/dashboard/settings"],
+          ],
+    },
+    {
+      title: "Company",
+      links: [
+        ["Why it exists", "/#product"],
+        ["How the pipeline works", "/#pipeline"],
+        signedIn ? ["Open workspace", "/dashboard"] : ["Start a workspace", "/register"],
+      ],
+    },
+  ] as const;
+}
 
-export function SiteFooter() {
+export function SiteFooter({ signedIn = false }: { signedIn?: boolean }) {
+  const columns = footerColumns(signedIn);
   return (
     <footer className="bg-black">
       <SunsetStripe />

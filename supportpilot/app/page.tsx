@@ -6,8 +6,14 @@ import { SiteFooter } from "@/components/landing/site-footer";
 import { MotionRoot } from "@/components/motion/motion-root";
 import { Reveal } from "@/components/motion/reveal";
 import { Button } from "@/components/ui/button";
+import { getCurrentUser } from "@/lib/data";
 
-export default function HomePage() {
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const user = await getCurrentUser();
+  const signedIn = Boolean(user);
+
   return (
     <MotionRoot>
       <div className="min-h-full bg-black text-white">
@@ -21,10 +27,12 @@ export default function HomePage() {
             <nav className="hidden items-center gap-6 text-[14px] font-medium text-white/60 sm:flex">
               <Link href="#product">Product</Link>
               <Link href="#pipeline">Pipeline</Link>
-              <Link href="/login">Sign in</Link>
+              {signedIn ? null : <Link href="/login">Sign in</Link>}
             </nav>
             <Button variant="dark" asChild>
-              <Link href="/register">Start workspace</Link>
+              <Link href={signedIn ? "/dashboard" : "/register"}>
+                {signedIn ? "Open workspace" : "Start workspace"}
+              </Link>
             </Button>
           </div>
         </header>
@@ -45,14 +53,16 @@ export default function HomePage() {
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Button variant="dark" asChild>
-                  <Link href="/register">
-                    Create a workspace
+                  <Link href={signedIn ? "/dashboard" : "/register"}>
+                    {signedIn ? "Open workspace" : "Create a workspace"}
                     <ArrowRight className="size-4" />
                   </Link>
                 </Button>
-                <Button variant="outline" asChild>
-                  <Link href="/login">Sign in</Link>
-                </Button>
+                {signedIn ? null : (
+                  <Button variant="outline" asChild>
+                    <Link href="/login">Sign in</Link>
+                  </Button>
+                )}
               </div>
             </Reveal>
 
@@ -133,7 +143,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <PipelineZigZag />
+        <PipelineZigZag signedIn={signedIn} />
 
         <section className="bg-black px-8 py-24">
           <Reveal className="mx-auto max-w-[1280px] rounded-[28px] border border-white/10 bg-[#111] px-8 py-16 text-center md:px-16">
@@ -144,16 +154,20 @@ export default function HomePage() {
             </p>
             <div className="mt-8 flex justify-center gap-3">
               <Button variant="dark" asChild>
-                <Link href="/register">Create workspace</Link>
+                <Link href={signedIn ? "/dashboard" : "/register"}>
+                  {signedIn ? "Open workspace" : "Create workspace"}
+                </Link>
               </Button>
-              <Button variant="outline" asChild>
-                <Link href="/login">Sign in</Link>
-              </Button>
+              {signedIn ? null : (
+                <Button variant="outline" asChild>
+                  <Link href="/login">Sign in</Link>
+                </Button>
+              )}
             </div>
           </Reveal>
         </section>
 
-        <SiteFooter />
+        <SiteFooter signedIn={signedIn} />
       </div>
     </MotionRoot>
   );

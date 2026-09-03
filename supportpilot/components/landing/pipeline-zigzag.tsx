@@ -45,7 +45,7 @@ const STEPS = [
   },
 ] as const;
 
-export function PipelineZigZag() {
+export function PipelineZigZag({ signedIn = false }: { signedIn?: boolean }) {
   return (
     <section id="pipeline" className="relative overflow-hidden bg-black py-28">
       <div className="pointer-events-none absolute left-1/2 top-24 h-80 w-[46rem] -translate-x-1/2 rounded-full bg-primary/20 blur-[140px]" />
@@ -77,10 +77,10 @@ export function PipelineZigZag() {
                       {step.body}
                     </p>
                     <Link
-                      href="/register"
+                      href={signedIn ? "/dashboard" : "/register"}
                       className="mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-white px-6 text-[14px] font-medium text-black"
                     >
-                      Start workspace
+                      {signedIn ? "Open workspace" : "Start workspace"}
                       <ArrowRight className="size-4" />
                     </Link>
                   </div>
