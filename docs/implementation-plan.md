@@ -241,3 +241,5 @@ Do not migrate everything up front. Add tables with the phase:
 A stranger can: create a workspace, connect a mailbox, upload a policy, receive a real email as a ticket, generate a draft that cites that policy, edit it, send it, and the customer gets the mail. Usage is counted. Another org cannot see that data.
 
 Until then, keep calling it a prototype in README and landing — or finish the loop.
+
+See [`docs/production-hardening.md`](./production-hardening.md) for the post-Phase-5 worker, CI, and operator checklist. Do not start Phase 6 until that loop runs without a dashboard tab as the job runner.

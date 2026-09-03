@@ -1,6 +1,6 @@
 # AI Customer Support Copilot
 
-The SupportPilot app lives in [`supportpilot/`](./supportpilot).
+SupportPilot is the hosted agent copilot in [`supportpilot/`](./supportpilot).
 
 ```bash
 cd supportpilot
@@ -9,4 +9,4 @@ npm install
 npm run dev
 ```
 
-See `supportpilot/README.md` for Supabase setup, stages, and the current demo path.
+See [`supportpilot/README.md`](./supportpilot/README.md) for env, jobs, and the product loop. Plan: [`docs/implementation-plan.md`](./docs/implementation-plan.md). Production hardening: [`docs/production-hardening.md`](./docs/production-hardening.md).

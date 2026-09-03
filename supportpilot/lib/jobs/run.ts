@@ -1,12 +1,15 @@
 import { ingestInboundEmail, type IngestEmailPayload } from "@/lib/channels/email/ingest";
 import { deliverOutboundMessage, markOutboundFailed } from "@/lib/channels/email/outbound";
 import { markDocumentFailed, processKnowledgeDocument } from "@/lib/knowledge/process";
-import { claimPendingJobs, completeJob, failJob, rescheduleJob } from "@/lib/jobs/queue";
+import { claimPendingJobs, claimPendingJobsForOrg, completeJob, failJob, rescheduleJob } from "@/lib/jobs/queue";
 import { RATE_LIMIT_DELAY_MS, resolveIndexJobAction, resolveSendJobAction } from "@/lib/jobs/policy";
 import type { Job } from "@/lib/jobs/types";
 
-export async function runPendingJobs(batchSize = 3) {
-  const jobs = await claimPendingJobs(batchSize);
+export async function runPendingJobs(options?: { organizationId?: string; batchSize?: number }) {
+  const batchSize = options?.batchSize ?? 3;
+  const jobs = options?.organizationId
+    ? await claimPendingJobsForOrg(options.organizationId, batchSize)
+    : await claimPendingJobs(batchSize);
   for (const job of jobs) {
     await runJob(job);
   }

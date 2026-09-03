@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type MouseEvent } from "react";
+import { isIndexing } from "@/lib/knowledge/pipeline";
 import type { DocumentStatus } from "@/lib/types";
 
 export function RetryIndexButton({
@@ -15,14 +16,7 @@ export function RetryIndexButton({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (status === "indexed") return null;
-
-  const inFlight =
-    status === "queued" ||
-    status === "uploading" ||
-    status === "extracting" ||
-    status === "chunking" ||
-    status === "embedding";
+  if (status === "indexed" || isIndexing(status)) return null;
 
   async function onRetry(event: MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
@@ -37,7 +31,7 @@ export function RetryIndexButton({
     const payload = await response.json().catch(() => ({}));
     setPending(false);
     if (!response.ok) {
-      setError(payload.error ?? "Indexing failed.");
+      setError(payload.error ?? "Could not restart indexing. Try again in a moment.");
       return;
     }
     router.refresh();
@@ -48,10 +42,10 @@ export function RetryIndexButton({
       <button
         type="button"
         onClick={onRetry}
-        disabled={pending || inFlight}
-        className="rounded-full border border-white/15 px-3 py-1 text-[12px] font-medium text-white/80 hover:bg-white/8 disabled:opacity-60"
+        disabled={pending}
+        className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-primary/20 disabled:opacity-60"
       >
-        {pending || inFlight ? "Indexing…" : "Retry indexing"}
+        {pending ? "Retrying…" : "Retry indexing"}
       </button>
       {error ? <p className="max-w-[16rem] text-right text-[12px] text-primary">{error}</p> : null}
     </div>

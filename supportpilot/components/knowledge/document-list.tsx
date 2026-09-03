@@ -1,70 +1,107 @@
 import Link from "next/link";
 import { FileText } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { DeleteDocumentButton } from "@/components/knowledge/delete-document-button";
+import { ProcessingStatus } from "@/components/knowledge/processing-status";
 import { RetryIndexButton } from "@/components/knowledge/retry-index-button";
+import { documentKind } from "@/lib/knowledge/library";
+import { isIndexing, isWaitingForRetry } from "@/lib/knowledge/pipeline";
 import type { KnowledgeDocument } from "@/lib/types";
 
-const statusLabel: Record<KnowledgeDocument["status"], string> = {
-  queued: "Queued",
-  uploading: "Uploading",
-  extracting: "Extracting",
-  chunking: "Chunking",
-  embedding: "Embedding",
-  indexed: "Indexed",
-  failed: "Failed",
-};
+const KIND_LABEL = {
+  pdf: "PDF",
+  md: "Markdown",
+  txt: "Text",
+  other: "File",
+} as const;
 
-export function DocumentList({
+export function DocumentRows({
   documents,
   canManage,
 }: {
   documents: KnowledgeDocument[];
   canManage: boolean;
 }) {
-  if (documents.length === 0) {
-    return (
-      <div className="rounded-lg border border-dashed border-beige-deep bg-cream px-6 py-16 text-center">
-        <FileText className="mx-auto size-8 text-primary" />
-        <p className="mt-3 font-medium">No documents yet</p>
-        <p className="mx-auto mt-1 max-w-md text-[14px] text-steel">
-          Upload PDFs, Markdown, or text. The pipeline will extract, chunk, embed, and index
-          them for retrieval.
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <ul className="divide-y divide-hairline-soft overflow-hidden rounded-lg border border-hairline-soft bg-canvas">
-      {documents.map((doc) => (
-        <li key={doc.id} className="flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-cream-light">
-          <Link href={`/dashboard/knowledge/${doc.id}`} className="flex min-w-0 flex-1 items-center gap-3">
-            <FileText className="size-4 shrink-0 text-primary" />
-            <div className="min-w-0">
-              <p className="truncate font-medium">{doc.name}</p>
-              <p className="text-[13px] text-steel">
-                {doc.file_type.toUpperCase()} ·{" "}
-                {new Date(doc.created_at).toLocaleDateString("en", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </p>
-              {doc.error_message ? (
-                <p className="mt-1 truncate text-[12px] text-primary">{doc.error_message}</p>
-              ) : null}
+    <ul className="overflow-hidden rounded-2xl bg-[#111]">
+      {documents.map((doc) => {
+        const running = isIndexing(doc.status);
+        const failed = doc.status === "failed";
+        return (
+          <li key={doc.id} className="border-t border-white/[0.05] first:border-t-0">
+            <div className="flex items-start justify-between gap-4 px-5 py-4">
+              <DocumentIdentity document={doc} />
+              <DocumentActions document={doc} canManage={canManage} />
             </div>
-          </Link>
-          <div className="flex shrink-0 items-center gap-3">
-            {canManage ? <RetryIndexButton documentId={doc.id} status={doc.status} /> : null}
-            {canManage ? <DeleteDocumentButton documentId={doc.id} /> : null}
-            <Badge variant={doc.status === "indexed" ? "default" : doc.status === "failed" ? "high" : "secondary"}>
-              {statusLabel[doc.status]}
-            </Badge>
+            {running || failed ? (
+              <div className="px-5 pb-5">
+                <ProcessingStatus current={doc.status} fileName={doc.name} error={doc.error_message} />
+              </div>
+            ) : null}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+export function DocumentCards({
+  documents,
+  canManage,
+}: {
+  documents: KnowledgeDocument[];
+  canManage: boolean;
+}) {
+  return (
+    <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {documents.map((doc) => (
+        <li key={doc.id} className="flex flex-col rounded-2xl bg-[#111] p-4">
+          <DocumentIdentity document={doc} />
+          <div className="mt-4 flex items-center justify-end gap-2">
+            <DocumentActions document={doc} canManage={canManage} />
           </div>
         </li>
       ))}
     </ul>
+  );
+}
+
+function DocumentIdentity({ document }: { document: KnowledgeDocument }) {
+  const kind = documentKind(document.file_type);
+  return (
+    <Link href={`/dashboard/knowledge/${document.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/10">
+        <FileText className="size-4 text-primary" />
+      </span>
+      <div className="min-w-0">
+        <p className="truncate text-[14px] font-medium">{document.name}</p>
+        <p className="mt-0.5 truncate text-[13px] text-white/40">
+          {KIND_LABEL[kind]} ·{" "}
+          {new Date(document.created_at).toLocaleDateString("en", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })}
+          {document.status === "indexed" ? " · Ready to cite" : null}
+          {isWaitingForRetry(document.status, document.error_message) ? " · Waiting to retry" : null}
+          {document.status === "failed" ? " · Failed" : null}
+        </p>
+      </div>
+    </Link>
+  );
+}
+
+function DocumentActions({
+  document,
+  canManage,
+}: {
+  document: KnowledgeDocument;
+  canManage: boolean;
+}) {
+  if (!canManage) return null;
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      <RetryIndexButton documentId={document.id} status={document.status} />
+      <DeleteDocumentButton documentId={document.id} />
+    </div>
   );
 }

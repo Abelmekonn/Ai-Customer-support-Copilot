@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
 import { DeleteDocumentButton } from "@/components/knowledge/delete-document-button";
 import { IndexingPoller } from "@/components/knowledge/indexing-poller";
 import { ProcessingStatus } from "@/components/knowledge/processing-status";
@@ -7,6 +6,7 @@ import { RetryIndexButton } from "@/components/knowledge/retry-index-button";
 import { canManageKnowledge } from "@/lib/auth/roles";
 import { getCurrentUser } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
 
 export default async function DocumentPage({
   params,
@@ -28,30 +28,32 @@ export default async function DocumentPage({
   if (!document) notFound();
 
   return (
-    <div className="h-full min-h-0 w-full space-y-6 overflow-y-auto p-6">
+    <div className="h-full min-h-0 w-full overflow-y-auto bg-[#0a0a0a]">
       <IndexingPoller statuses={[document.status]} />
-      <div>
-        <p className="text-xs text-muted-foreground">Document</p>
-        <h1 className="mt-1 typo-heading-1">{document.name}</h1>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Badge variant={document.status === "indexed" ? "default" : document.status === "failed" ? "high" : "secondary"}>
-            {document.status}
-          </Badge>
-          <span className="text-xs text-muted-foreground">
-            {document.file_type.toUpperCase()}
-          </span>
+      <div className="mx-auto flex max-w-[1200px] flex-col gap-4 px-6 py-7 pb-16">
+        <Link href="/dashboard/knowledge" className="text-[13px] text-white/40 hover:text-white">
+          Knowledge
+        </Link>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="typo-heading-1">{document.name}</h1>
+            <p className="mt-2 text-[14px] text-white/45">{document.file_type.toUpperCase()}</p>
+          </div>
           {canManageKnowledge(user.role) ? (
-            <>
+            <div className="flex items-center gap-2">
               <RetryIndexButton documentId={document.id} status={document.status} />
               <DeleteDocumentButton documentId={document.id} />
-            </>
+            </div>
           ) : null}
         </div>
+        <section className="rounded-2xl bg-[#111] p-5">
+          <ProcessingStatus
+            current={document.status}
+            fileName={document.name}
+            error={document.error_message}
+          />
+        </section>
       </div>
-      {document.error_message ? (
-        <p className="text-sm text-destructive">{document.error_message}</p>
-      ) : null}
-      <ProcessingStatus current={document.status} />
     </div>
   );
 }

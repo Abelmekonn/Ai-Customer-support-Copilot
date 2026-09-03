@@ -4,7 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BookOpen,
-  LayoutDashboard,
+  ChevronDown,
+  Folder,
+  Home,
   LineChart,
   Settings,
   Ticket,
@@ -16,51 +18,58 @@ import type { UserRole } from "@/lib/types";
 import { canViewAnalytics } from "@/lib/auth/roles";
 import { cn, initials } from "@/lib/utils";
 
-const items = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/tickets", label: "Tickets", icon: Ticket },
+const workspaceItems = [
+  { href: "/dashboard", label: "Home", icon: Home },
+  { href: "/dashboard/tickets", label: "Inbox", icon: Ticket },
   { href: "/dashboard/knowledge", label: "Knowledge", icon: BookOpen },
   { href: "/dashboard/customers", label: "Customers", icon: Users },
   { href: "/dashboard/analytics", label: "Analytics", icon: LineChart },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
-export function AppSidebar({ name, role }: { name: string; role: UserRole }) {
+export function AppSidebar({
+  name,
+  role,
+  organizationName,
+}: {
+  name: string;
+  role: UserRole;
+  organizationName: string;
+}) {
   const pathname = usePathname();
-  const nav = items.filter((item) => item.href !== "/dashboard/analytics" || canViewAnalytics(role));
+  const nav = workspaceItems.filter(
+    (item) => item.href !== "/dashboard/analytics" || canViewAnalytics(role),
+  );
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r border-white/10 bg-black text-white">
-      <div className="flex h-16 items-center gap-2.5 px-4">
-        <img src="/logo.svg" alt="" className="size-7" />
-        <span className="text-[15px] font-medium tracking-tight">SupportPilot</span>
+    <aside className="flex w-[248px] shrink-0 flex-col border-r border-white/[0.06] bg-[#0a0a0a] text-white">
+      <div className="px-3 pt-4 pb-2">
+        <div className="flex items-center gap-2.5 rounded-xl bg-[#141414] px-2.5 py-2">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#ffd06a] text-black">
+            <Folder className="size-4" strokeWidth={1.75} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[13px] font-medium leading-tight">{organizationName}</p>
+            <p className="text-[11px] text-white/35">Workspace</p>
+          </div>
+          <ChevronDown className="size-3.5 shrink-0 text-white/30" />
+        </div>
       </div>
-      <nav className="flex flex-1 flex-col gap-0.5 p-3">
-        {nav.map((item) => {
-          const active =
-            item.href === "/dashboard"
-              ? pathname === "/dashboard"
-              : pathname.startsWith(item.href);
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-2.5 rounded-md px-3 py-2 text-[14px] font-medium transition-colors duration-150",
-                active
-                  ? "bg-white/10 text-white"
-                  : "text-white/50 hover:bg-white/8 hover:text-white",
-              )}
-            >
-              <Icon className="size-4" />
-              {item.label}
-            </Link>
-          );
-        })}
+      <nav className="flex flex-1 flex-col gap-5 overflow-y-auto px-3 py-2">
+        <NavGroup items={nav} pathname={pathname} />
+        <div>
+          <p className="px-3 pb-1.5 text-[11px] font-medium tracking-[0.06em] text-white/30">
+            More
+          </p>
+          <NavLink
+            href="/dashboard/settings"
+            label="Settings"
+            icon={Settings}
+            active={pathname.startsWith("/dashboard/settings")}
+          />
+        </div>
       </nav>
-      <div className="border-t border-white/10 p-3">
-        <div className="flex items-center gap-2.5 px-2 py-2">
+      <div className="mt-auto border-t border-white/[0.06] px-3 py-3">
+        <div className="flex items-center gap-2.5 px-2 py-1.5">
           <Avatar className="size-8">
             <AvatarFallback className="bg-white/10 text-[12px] font-semibold text-white">
               {initials(name)}
@@ -68,11 +77,66 @@ export function AppSidebar({ name, role }: { name: string; role: UserRole }) {
           </Avatar>
           <div className="min-w-0">
             <p className="truncate text-[13px] font-medium">{name}</p>
-            <p className="text-[12px] capitalize text-white/40">{role}</p>
+            <p className="text-[11px] capitalize text-white/35">{role}</p>
           </div>
         </div>
-        <SignOutButton className="mt-1 w-full rounded-md px-3 py-2 text-left hover:bg-white/8" />
+        <SignOutButton className="mt-1 w-full rounded-lg px-3 py-2 text-left text-[13px] text-white/45 hover:bg-white/[0.06] hover:text-white" />
       </div>
     </aside>
+  );
+}
+
+function NavGroup({
+  items,
+  pathname,
+}: {
+  items: { href: string; label: string; icon: typeof Home }[];
+  pathname: string;
+}) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      {items.map((item) => {
+        const active =
+          item.href === "/dashboard"
+            ? pathname === "/dashboard"
+            : pathname.startsWith(item.href);
+        return (
+          <NavLink
+            key={item.href}
+            href={item.href}
+            label={item.label}
+            icon={item.icon}
+            active={active}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function NavLink({
+  href,
+  label,
+  icon: Icon,
+  active,
+}: {
+  href: string;
+  label: string;
+  icon: typeof Home;
+  active: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-medium transition-colors duration-150",
+        active
+          ? "bg-[#1a1a1a] text-white"
+          : "text-white/45 hover:bg-white/[0.04] hover:text-white",
+      )}
+    >
+      <Icon className="size-4" strokeWidth={1.75} />
+      {label}
+    </Link>
   );
 }

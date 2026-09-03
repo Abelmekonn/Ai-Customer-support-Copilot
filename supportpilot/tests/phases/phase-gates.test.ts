@@ -30,6 +30,11 @@ describe("Phase 0 — jobs platform", () => {
     expect(existsApp("app/api/jobs/run/route.ts")).toBe(true);
     expect(existsApp("lib/jobs/run.ts")).toBe(true);
     expect(existsApp("supabase/migrations/004_jobs.sql")).toBe(true);
+    const route = readApp("app/api/jobs/run/route.ts");
+    expect(route).toContain("authorizeCronRequest");
+    expect(route).toContain("organizationId");
+    expect(existsApp("supabase/migrations/009_jobs_org_claim.sql")).toBe(true);
+    expect(existsApp("vercel.json")).toBe(true);
   });
 
   it("records usage events when chunks are indexed", () => {

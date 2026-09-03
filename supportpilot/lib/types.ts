@@ -45,6 +45,21 @@ export type Customer = {
   updated_at: string;
 };
 
+export type CustomerDirectoryRow = Customer & {
+  ticketCount: number;
+  openCount: number;
+  pendingCount: number;
+  resolvedCount: number;
+  lastTicket: {
+    id: string;
+    subject: string;
+    status: TicketStatus;
+    last_message_at: string;
+    ticket_number: number;
+  } | null;
+  openTicketId: string | null;
+};
+
 export type Ticket = {
   id: string;
   organization_id: string;

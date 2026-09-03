@@ -1,3 +1,5 @@
+import { isRateLimitError } from "@/lib/knowledge/errors";
+
 export class EmbeddingError extends Error {
   constructor(message: string) {
     super(message);
@@ -5,9 +7,7 @@ export class EmbeddingError extends Error {
   }
 }
 
-export function isRateLimitError(message: string) {
-  return /rate limit|rpm|too many requests|\b429\b|per-minute embedding limit/i.test(message);
-}
+export { isRateLimitError };
 
 export function friendlyEmbeddingError(message: string) {
   if (isRateLimitError(message)) {

@@ -1,35 +1,37 @@
-import { getCurrentUser, listCustomers } from "@/lib/data";
+import { CustomerDirectory } from "@/components/customers/customer-directory";
+import { CustomerSearch } from "@/components/customers/customer-search";
+import { getCurrentUser, getOrganization, listCustomerDirectory } from "@/lib/data";
 
-export default async function CustomersPage() {
+export default async function CustomersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; filter?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const customers = await listCustomers(user.organization_id);
+  const params = await searchParams;
+  const rawQuery = (params.q ?? "").trim();
+  const filter = params.filter === "open" || params.filter === "pending" ? params.filter : "all";
+
+  const [organization, rows] = await Promise.all([
+    getOrganization(user.organization_id),
+    listCustomerDirectory(user.organization_id),
+  ]);
 
   return (
-    <div className="h-full min-h-0 w-full space-y-6 overflow-y-auto p-6">
-      <div>
-        <h1 className="typo-heading-1">Customers</h1>
-        <p className="typo-subtitle mt-2 text-ink-tint">
-          People who have written into this workspace.
-        </p>
+    <div className="h-full min-h-0 w-full overflow-y-auto bg-[#0a0a0a]">
+      <div className="border-b border-white/[0.06] px-6 py-3">
+        <CustomerSearch query={rawQuery} filter={filter} />
       </div>
-      {customers.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No customers yet. Load sample tickets from the dashboard to populate a demo queue.
-        </p>
-      ) : (
-        <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
-          {customers.map((customer) => (
-            <li key={customer.id} className="flex items-center justify-between px-5 py-3.5">
-              <div>
-                <p className="text-sm font-medium">{customer.name}</p>
-                <p className="text-xs text-muted-foreground">{customer.email}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+      <div className="mx-auto max-w-[1200px] px-6 py-7 pb-16">
+        <CustomerDirectory
+          rows={rows}
+          filter={filter}
+          query={rawQuery}
+          isDemo={organization?.is_demo !== false}
+        />
+      </div>
     </div>
   );
 }

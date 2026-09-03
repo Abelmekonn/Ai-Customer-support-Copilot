@@ -46,6 +46,7 @@ export default async function TicketsPage({
       <TicketList
         tickets={filtered}
         status={status as "open" | "pending" | "resolved"}
+        statusCount={tickets.length}
         totalInOrg={open.length + pending.length + resolved.length}
         isDemo={org?.is_demo !== false}
       />

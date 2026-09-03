@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { buildAnalytics, utcWindowStart, type AnalyticsSnapshot } from "@/lib/analytics/build";
+import { getBillingSnapshot } from "@/lib/billing/usage";
 import type { CopilotSource } from "@/lib/ai/types";
-import type { AiGeneration, AppUser, Customer, Invite, KnowledgeDocument, Message, MessageAttachment, Organization, TicketWithCustomer } from "@/lib/types";
+import type { AiGeneration, AppUser, Customer, CustomerDirectoryRow, Invite, KnowledgeDocument, Message, MessageAttachment, Organization, TicketStatus, TicketWithCustomer } from "@/lib/types";
 
 export async function getCurrentUser() {
   const supabase = await createClient();
@@ -186,6 +188,61 @@ export async function listCustomers(organizationId: string) {
   return (data ?? []) as Customer[];
 }
 
+type TicketLite = {
+  id: string;
+  customer_id: string;
+  subject: string;
+  status: TicketStatus;
+  last_message_at: string;
+  ticket_number: number;
+};
+
+export async function listCustomerDirectory(organizationId: string) {
+  const supabase = await createClient();
+  const [{ data: customers, error: customerError }, { data: tickets, error: ticketError }] =
+    await Promise.all([
+      supabase.from("customers").select("*").eq("organization_id", organizationId),
+      supabase
+        .from("tickets")
+        .select("id, customer_id, subject, status, last_message_at, ticket_number")
+        .eq("organization_id", organizationId)
+        .order("last_message_at", { ascending: false }),
+    ]);
+
+  if (customerError) throw customerError;
+  if (ticketError) throw ticketError;
+
+  const byCustomer = new Map<string, TicketLite[]>();
+  for (const ticket of (tickets ?? []) as TicketLite[]) {
+    const list = byCustomer.get(ticket.customer_id) ?? [];
+    list.push(ticket);
+    byCustomer.set(ticket.customer_id, list);
+  }
+
+  const rows: CustomerDirectoryRow[] = ((customers ?? []) as Customer[]).map((customer) => {
+    const list = byCustomer.get(customer.id) ?? [];
+    const lastTicket = list[0] ?? null;
+    const openTicket = list.find((ticket) => ticket.status === "open") ?? null;
+    return {
+      ...customer,
+      ticketCount: list.length,
+      openCount: list.filter((ticket) => ticket.status === "open").length,
+      pendingCount: list.filter((ticket) => ticket.status === "pending").length,
+      resolvedCount: list.filter((ticket) => ticket.status === "resolved").length,
+      lastTicket,
+      openTicketId: openTicket?.id ?? null,
+    };
+  });
+
+  rows.sort((a, b) => {
+    const aTime = a.lastTicket?.last_message_at ?? a.created_at;
+    const bTime = b.lastTicket?.last_message_at ?? b.created_at;
+    return new Date(bTime).getTime() - new Date(aTime).getTime();
+  });
+
+  return rows;
+}
+
 export async function listDocuments(organizationId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -196,6 +253,62 @@ export async function listDocuments(organizationId: string) {
 
   if (error) throw error;
   return (data ?? []) as KnowledgeDocument[];
+}
+
+export async function getWorkspaceHome(organizationId: string, userId: string) {
+  const supabase = await createClient();
+  const [
+    { data: openRows, error: openError },
+    { count: ticketCount },
+    { count: pendingCount },
+    { count: resolvedCount },
+    documents,
+  ] = await Promise.all([
+    supabase
+      .from("tickets")
+      .select("*, customer:customers!customer_id(id, name, email), assignee:users!assigned_to(id, full_name)")
+      .eq("organization_id", organizationId)
+      .eq("status", "open")
+      .order("last_message_at", { ascending: true }),
+    supabase
+      .from("tickets")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", organizationId),
+    supabase
+      .from("tickets")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", organizationId)
+      .eq("status", "pending"),
+    supabase
+      .from("tickets")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", organizationId)
+      .eq("status", "resolved"),
+    listDocuments(organizationId),
+  ]);
+
+  if (openError) throw openError;
+
+  const open = (openRows ?? []) as TicketWithCustomer[];
+  const mine = open.filter((ticket) => ticket.assigned_to === userId);
+  const unassigned = open.filter((ticket) => !ticket.assigned_to);
+  const others = open.filter((ticket) => ticket.assigned_to && ticket.assigned_to !== userId);
+  const needsYou = [...mine, ...unassigned, ...others].slice(0, 6);
+
+  return {
+    nextTicket: mine[0] ?? open[0] ?? null,
+    needsYou,
+    openCount: open.length,
+    unassignedCount: unassigned.length,
+    pendingCount: pendingCount ?? 0,
+    resolvedCount: resolvedCount ?? 0,
+    ticketCount: ticketCount ?? 0,
+    documents: {
+      total: documents.length,
+      indexed: documents.filter((document) => document.status === "indexed").length,
+      failed: documents.filter((document) => document.status === "failed").length,
+    },
+  };
 }
 
 export async function listRecentTickets(organizationId: string, limit = 6) {
@@ -270,5 +383,59 @@ export async function listGenerationSources(generationId: string): Promise<Copil
         similarity: Number(citation.similarity),
       },
     ];
+  });
+}
+
+export async function getAnalyticsSnapshot(organizationId: string): Promise<AnalyticsSnapshot> {
+  const supabase = await createClient();
+  const since = utcWindowStart(14);
+  const [
+    { data: tickets, error: ticketError },
+    { data: generations, error: generationError },
+    { data: usage, error: usageError },
+    { data: documents, error: documentError },
+    { data: messages, error: messageError },
+    billing,
+  ] = await Promise.all([
+    supabase
+      .from("tickets")
+      .select("status, priority, created_at")
+      .eq("organization_id", organizationId),
+    supabase
+      .from("ai_generations")
+      .select("source_coverage, retrieval_quality, approved_at, created_at")
+      .eq("organization_id", organizationId),
+    supabase
+      .from("usage_events")
+      .select("type, quantity, created_at")
+      .eq("organization_id", organizationId)
+      .gte("created_at", since),
+    supabase
+      .from("knowledge_documents")
+      .select("status")
+      .eq("organization_id", organizationId),
+    supabase
+      .from("messages")
+      .select("send_status")
+      .eq("organization_id", organizationId)
+      .eq("is_internal", false)
+      .not("send_status", "is", null),
+    getBillingSnapshot(organizationId),
+  ]);
+
+  if (ticketError) throw ticketError;
+  if (generationError) throw generationError;
+  if (usageError) throw usageError;
+  if (documentError) throw documentError;
+  if (messageError) throw messageError;
+
+  return buildAnalytics({
+    tickets: tickets ?? [],
+    generations: generations ?? [],
+    usage: usage ?? [],
+    documents: documents ?? [],
+    messages: messages ?? [],
+    draftsUsedMonth: billing.drafts.used,
+    draftsCap: billing.drafts.cap,
   });
 }

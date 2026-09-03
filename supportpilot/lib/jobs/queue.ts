@@ -97,3 +97,13 @@ export async function claimPendingJobs(batchSize = 3) {
   if (error) throw new Error(error.message);
   return (data ?? []) as Job[];
 }
+
+export async function claimPendingJobsForOrg(organizationId: string, batchSize = 3) {
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("claim_pending_jobs_for_org", {
+    target_organization_id: organizationId,
+    batch_size: batchSize,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Job[];
+}

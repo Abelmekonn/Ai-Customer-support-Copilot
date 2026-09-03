@@ -1,115 +1,109 @@
-import Link from "next/link";
-import { LoadSampleTickets } from "@/components/demo/load-sample-tickets";
-import { PriorityBadge, StatusBadge } from "@/components/tickets/ticket-badges";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getCurrentUser, getDashboardStats, getOrganization, listRecentTickets } from "@/lib/data";
-import { formatRelativeTime, formatTicketNumber } from "@/lib/utils";
+import { HomeGreeting, KpiRow } from "@/components/dashboard/home-greeting";
+import { HomeSearch } from "@/components/dashboard/home-search";
+import { NeedsYouList } from "@/components/dashboard/needs-you-list";
+import { SetupStrip } from "@/components/dashboard/setup-strip";
+import { WorkspaceHealth } from "@/components/dashboard/workspace-health";
+import { getBillingSnapshot } from "@/lib/billing/usage";
+import { getChannelAccount } from "@/lib/channels/email/account";
+import { getCurrentUser, getOrganization, getWorkspaceHome } from "@/lib/data";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const [org, stats, recent] = await Promise.all([
+  const [organization, home, billing, channel] = await Promise.all([
     getOrganization(user.organization_id),
-    getDashboardStats(user.organization_id),
-    listRecentTickets(user.organization_id),
+    getWorkspaceHome(user.organization_id, user.id),
+    getBillingSnapshot(user.organization_id),
+    getChannelAccount(user.organization_id),
   ]);
 
-  const totalTickets = stats.openTickets + stats.pendingTickets + stats.resolvedTickets;
+  const hasPolicy = home.documents.total > 0;
+  const hasInbound = Boolean(channel);
+  const hasTickets = home.ticketCount > 0;
+  const showQueue = home.needsYou.length > 0;
+  const primary = primaryAction({
+    nextTicketId: home.nextTicket?.id ?? null,
+    hasPolicy,
+    hasInbound,
+  });
+
+  const health = (
+    <WorkspaceHealth
+      openCount={home.openCount}
+      pendingCount={home.pendingCount}
+      resolvedCount={home.resolvedCount}
+      drafts={billing.drafts}
+      documents={home.documents}
+      inboundAddress={channel?.inbound_address ?? null}
+    />
+  );
+
+  const setup = (
+    <SetupStrip
+      hasPolicy={hasPolicy}
+      hasInbound={hasInbound}
+      hasTickets={hasTickets}
+      isDemo={organization?.is_demo !== false}
+    />
+  );
 
   return (
-    <div className="h-full min-h-0 w-full space-y-8 overflow-y-auto p-6">
-      <div>
-        <h1 className="typo-heading-1">
-          {org?.name ?? "Workspace"}
-        </h1>
-        <p className="typo-subtitle mt-2 text-ink-tint">
-          {totalTickets === 0
-            ? org?.is_demo
-              ? "Load a sample inbox to walk the ticket workspace, or forward mail to the inbound address in Settings."
-              : "Forward customer email to the inbound address in Settings. New mail becomes a ticket."
-            : "Open tickets, copilot assists, and the queue that needs a human."}
-        </p>
+    <div className="h-full min-h-0 w-full overflow-y-auto bg-[#0a0a0a]">
+      <div className="border-b border-white/[0.06] px-6 py-3">
+        <HomeSearch />
       </div>
-
-      {totalTickets === 0 && org?.is_demo ? <LoadSampleTickets /> : null}
-      {totalTickets === 0 && !org?.is_demo ? (
-        <Link href="/dashboard/settings" className="text-[14px] font-medium text-primary">
-          Open inbound settings
-        </Link>
-      ) : null}
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Open tickets" value={stats.openTickets} />
-        <Stat label="Pending" value={stats.pendingTickets} />
-        <Stat label="AI assisted" value={stats.aiAssisted} hint="Generations stored for this org" />
-        <Stat label="Customers" value={stats.customers} />
-      </div>
-
-      <Card>
-        <CardHeader className="flex-row items-center justify-between">
-          <CardTitle>Recent tickets</CardTitle>
-          <Link href="/dashboard/tickets" className="text-[14px] font-medium text-primary">
-            Open inbox
-          </Link>
-        </CardHeader>
-        <CardContent className="p-0">
-          {recent.length === 0 ? (
-            <p className="px-6 pb-6 text-[14px] text-steel">Nothing in the queue yet.</p>
-          ) : (
-            <div>
-              <div className="grid grid-cols-[minmax(0,1fr)_6.25rem_5.75rem] gap-x-3 border-b border-hairline-soft px-6 py-2 sm:grid-cols-[minmax(0,1fr)_6.25rem_5.75rem_7rem] md:grid-cols-[minmax(0,1fr)_6.25rem_5.75rem_7rem_7.5rem]">
-                <p className="typo-eyebrow text-steel">Ticket</p>
-                <p className="typo-eyebrow text-steel">Status</p>
-                <p className="typo-eyebrow text-steel">Priority</p>
-                <p className="typo-eyebrow hidden text-steel sm:block">ID</p>
-                <p className="typo-eyebrow hidden text-right text-steel md:block">Updated</p>
-              </div>
-              <ul className="divide-y divide-hairline-soft">
-                {recent.map((ticket) => (
-                  <li key={ticket.id}>
-                    <Link
-                      href={`/dashboard/tickets/${ticket.id}`}
-                      className="grid grid-cols-[minmax(0,1fr)_6.25rem_5.75rem] items-center gap-x-3 px-6 py-3.5 hover:bg-cream-light sm:grid-cols-[minmax(0,1fr)_6.25rem_5.75rem_7rem] md:grid-cols-[minmax(0,1fr)_6.25rem_5.75rem_7rem_7.5rem]"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate font-medium">{ticket.subject}</p>
-                        <p className="truncate text-[14px] text-steel">
-                          {ticket.customer.name} · {ticket.category}
-                        </p>
-                      </div>
-                      <div>
-                        <StatusBadge status={ticket.status} />
-                      </div>
-                      <div>
-                        <PriorityBadge priority={ticket.priority} />
-                      </div>
-                      <span className="hidden font-mono text-[13px] text-steel sm:block">
-                        {formatTicketNumber(ticket.ticket_number)}
-                      </span>
-                      <span className="hidden text-right text-[13px] text-steel md:block">
-                        {formatRelativeTime(ticket.last_message_at)}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+      <div className="mx-auto flex max-w-[1200px] flex-col gap-4 px-6 py-7 pb-16">
+        <HomeGreeting fullName={user.full_name} primary={primary} />
+        <KpiRow
+          open={home.openCount}
+          unassigned={home.unassignedCount}
+          pending={home.pendingCount}
+          draftsUsed={billing.drafts.used}
+          draftsCap={billing.drafts.cap}
+          draftsRemaining={billing.drafts.remaining}
+          indexed={home.documents.indexed}
+          failed={home.documents.failed}
+        />
+        {showQueue ? (
+          <>
+            <div className="grid items-stretch gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(16rem,0.8fr)]">
+              <NeedsYouList tickets={home.needsYou} />
+              {health}
             </div>
-          )}
-        </CardContent>
-      </Card>
+            {setup}
+          </>
+        ) : (
+          <>
+            {setup}
+            <div className="grid items-stretch gap-3 lg:grid-cols-2">
+              <NeedsYouList tickets={home.needsYou} />
+              {health}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
 
-function Stat({ label, value, hint }: { label: string; value: number; hint?: string }) {
-  return (
-    <Card className="shadow-[0_4px_12px_rgba(0,0,0,0.04)]">
-      <CardHeader>
-        <p className="typo-eyebrow text-steel">{label}</p>
-        <p className="typo-stat">{value}</p>
-        {hint ? <p className="text-[13px] text-steel">{hint}</p> : null}
-      </CardHeader>
-    </Card>
-  );
+function primaryAction({
+  nextTicketId,
+  hasPolicy,
+  hasInbound,
+}: {
+  nextTicketId: string | null;
+  hasPolicy: boolean;
+  hasInbound: boolean;
+}) {
+  if (nextTicketId) {
+    return { href: `/dashboard/tickets/${nextTicketId}`, label: "Open next ticket" };
+  }
+  if (!hasPolicy) {
+    return { href: "/dashboard/knowledge", label: "Upload policy" };
+  }
+  if (!hasInbound) {
+    return { href: "/dashboard/settings#mailbox", label: "Connect mailbox" };
+  }
+  return { href: "/dashboard/tickets", label: "Open inbox" };
 }

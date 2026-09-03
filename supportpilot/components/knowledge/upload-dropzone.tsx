@@ -36,7 +36,7 @@ export function UploadDropzone() {
     setPending(false);
 
     if (!response.ok) {
-      setError(payload.error ?? "Upload failed.");
+      setError(payload.error ?? "Could not store the file. Try again, or rename it and retry.");
       return;
     }
 
@@ -44,13 +44,15 @@ export function UploadDropzone() {
   }
 
   return (
-    <label className="flex cursor-pointer flex-col items-center justify-center rounded-[28px] border border-dashed border-white/15 bg-[#111] px-6 py-10 text-center">
+    <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-[#111] px-6 py-10 text-center">
       <Upload className="size-6 text-primary" />
-      <p className="mt-3 text-sm font-medium">
-        {pending ? "Uploading…" : "Drop a PDF, Markdown, or text file"}
+      <p className="mt-3 text-[15px] font-medium">
+        {pending ? "Storing the file…" : "Drop a PDF, Markdown, or text file"}
       </p>
-      <p className="mt-1 max-w-md text-[13px] text-steel">
-        The file is stored immediately. Indexing runs in the background.
+      <p className="mt-1 max-w-md text-[13px] leading-5 text-white/40">
+        {pending
+          ? "Upload is saved first. The Queued → Indexed steps will appear on the document below."
+          : "The file is stored immediately. Indexing then runs through Queued, Extracting, Chunking, Embedding, Indexed."}
       </p>
       {error ? (
         <p className="mt-3 max-w-md text-[14px] leading-6 text-primary" role="alert">

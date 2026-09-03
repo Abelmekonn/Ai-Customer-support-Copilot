@@ -5,11 +5,11 @@ import type { TicketStatus } from "@/lib/types";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
-const LABELS: Record<TicketStatus, string> = {
-  open: "Open",
-  pending: "Pending",
-  resolved: "Resolved",
-};
+const QUEUES: { status: TicketStatus; label: string; hint: string }[] = [
+  { status: "open", label: "Open", hint: "Need a reply" },
+  { status: "pending", label: "Pending", hint: "Waiting on them" },
+  { status: "resolved", label: "Resolved", hint: "Closed" },
+];
 
 export function TicketFilters({
   counts,
@@ -21,35 +21,36 @@ export function TicketFilters({
   const query = searchParams.get("q");
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r border-white/10 bg-black p-5">
-      <p className="text-[11px] font-semibold uppercase tracking-[1.4px] text-white/45">
-        Queue
-      </p>
-      <div className="mt-4 flex flex-col gap-1.5">
-        {(Object.keys(LABELS) as TicketStatus[]).map((status) => {
+    <aside className="flex w-[220px] shrink-0 flex-col border-r border-white/[0.06] bg-[#0a0a0a] px-3 py-5">
+      <p className="px-3 pb-2 text-[11px] font-medium tracking-[0.06em] text-white/30">Queue</p>
+      <div className="flex flex-col gap-0.5">
+        {QUEUES.map((queue) => {
           const params = new URLSearchParams();
-          params.set("status", status);
+          params.set("status", queue.status);
           if (query) params.set("q", query);
-          const isActive = active === status;
+          const isActive = active === queue.status;
           return (
             <Link
-              key={status}
+              key={queue.status}
               href={`/dashboard/tickets?${params.toString()}`}
               className={cn(
-                "flex items-center justify-between rounded-xl px-3.5 py-2.5 text-[14px] font-medium transition-colors",
+                "flex items-center justify-between rounded-xl px-3 py-2.5 transition-colors duration-150",
                 isActive
-                  ? "bg-white text-black"
-                  : "text-white/70 hover:bg-white/6 hover:text-white",
+                  ? "bg-[#1a1a1a] text-white"
+                  : "text-white/45 hover:bg-white/[0.04] hover:text-white",
               )}
             >
-              {LABELS[status]}
+              <span>
+                <span className="block text-[13px] font-medium">{queue.label}</span>
+                <span className="mt-0.5 block text-[11px] text-white/30">{queue.hint}</span>
+              </span>
               <span
                 className={cn(
-                  "rounded-full px-2 py-0.5 font-mono text-[12px]",
-                  isActive ? "bg-black/10 text-black" : "bg-white/8 text-white/55",
+                  "tabular-nums text-[13px]",
+                  isActive ? "text-white" : "text-white/35",
                 )}
               >
-                {counts[status] ?? 0}
+                {counts[queue.status] ?? 0}
               </span>
             </Link>
           );

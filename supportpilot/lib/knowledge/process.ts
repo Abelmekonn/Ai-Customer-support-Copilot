@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { chunkPages } from "@/lib/knowledge/chunk";
 import { embedDocuments, EmbeddingError, friendlyEmbeddingError, isRateLimitError } from "@/lib/knowledge/embed";
+import { TERMINAL_RATE_LIMIT_HINT } from "@/lib/knowledge/pipeline";
 import { extractDocumentPages } from "@/lib/knowledge/extract";
 import { recordUsage } from "@/lib/usage/record";
 import type { DocumentStatus } from "@/lib/types";
@@ -81,6 +82,10 @@ export async function processKnowledgeDocument(documentId: string): Promise<Proc
       cause instanceof EmbeddingError || cause instanceof Error ? cause.message : "Indexing failed.",
     );
     if (isRateLimitError(message)) {
+      await admin
+        .from("knowledge_documents")
+        .update({ error_message: message })
+        .eq("id", documentId);
       return { ok: false, error: message, retryable: true };
     }
     return failDocument(admin, documentId, message);
@@ -109,9 +114,10 @@ async function failDocument(
   documentId: string,
   message: string,
 ) {
+  const stored = isRateLimitError(message) ? TERMINAL_RATE_LIMIT_HINT : message;
   await admin
     .from("knowledge_documents")
-    .update({ status: "failed", error_message: message })
+    .update({ status: "failed", error_message: stored })
     .eq("id", documentId);
-  return { ok: false as const, error: message };
+  return { ok: false as const, error: stored };
 }
