@@ -37,7 +37,7 @@ export default async function HomePage() {
           </div>
         </header>
 
-        <section className="sunset-hero relative min-h-[calc(100vh-7rem)] overflow-hidden">
+        <section className="relative min-h-[calc(100vh-7rem)] overflow-hidden bg-black">
           <div className="relative mx-auto grid min-h-[calc(100vh-7rem)] max-w-[1280px] items-center gap-12 px-8 py-16 md:grid-cols-2 md:py-24">
             <Reveal className="relative z-10 max-w-xl">
               <p className="typo-eyebrow text-primary">Frontier support. In your hands.</p>
@@ -68,7 +68,7 @@ export default async function HomePage() {
 
             <Reveal
               delay={0.12}
-              className="relative z-10 flex min-h-[560px] flex-col overflow-hidden rounded-[28px] border border-white/[0.08] bg-[#161616] text-white shadow-[0_0_140px_rgba(250,82,15,0.22)]"
+              className="relative z-10 flex min-h-[560px] flex-col overflow-hidden rounded-[28px] border border-white/[0.08] bg-[#161616] text-white"
             >
               <div className="flex items-center justify-between px-10 pt-8 text-[13px] text-white/40">
                 <span>Ticket #1042</span>

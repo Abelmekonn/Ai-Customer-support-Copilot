@@ -269,11 +269,4 @@
       #1a1a1a 100%
     );
   }
-
-  .sunset-hero {
-    background:
-      radial-gradient(ellipse 70% 50% at 12% 20%, rgba(250, 82, 15, 0.28) 0%, transparent 58%),
-      radial-gradient(ellipse 50% 40% at 90% 80%, rgba(255, 161, 16, 0.16) 0%, transparent 55%),
-      #000000;
-  }
 }

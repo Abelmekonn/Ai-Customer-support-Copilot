@@ -47,9 +47,8 @@ const STEPS = [
 
 export function PipelineZigZag({ signedIn = false }: { signedIn?: boolean }) {
   return (
-    <section id="pipeline" className="relative overflow-hidden bg-black py-28">
-      <div className="pointer-events-none absolute left-1/2 top-24 h-80 w-[46rem] -translate-x-1/2 rounded-full bg-primary/20 blur-[140px]" />
-      <div className="relative mx-auto max-w-[1280px] px-8">
+    <section id="pipeline" className="bg-black py-28">
+      <div className="mx-auto max-w-[1280px] px-8">
         <Reveal>
           <p className="typo-eyebrow text-primary">The pipeline</p>
           <h2 className="typo-heading-1 mt-3 text-white">
@@ -102,7 +101,7 @@ function StepVisual({
   index: number;
 }) {
   return (
-    <div className="relative min-h-[420px] overflow-hidden rounded-[32px] border border-white/10 bg-[#111] shadow-[0_0_80px_rgba(250,82,15,0.1)]">
+    <div className="relative min-h-[420px] overflow-hidden rounded-[32px] border border-white/10 bg-[#111]">
       <div className="flex items-center justify-between border-b border-white/10 px-5 py-3.5">
         <div className="flex items-center gap-3">
           <span className="flex size-9 items-center justify-center rounded-lg bg-white text-[15px] font-semibold text-black">
